@@ -6,17 +6,16 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
-
-from tkinter import Tk, Frame, Menu, filedialog, Canvas, Label
+import math
+from tkinter import Canvas
 
 from position import Position
-from utils import get_color_from_gradient, get_color_hex
 
 
 class SensorsMapUI(Canvas):
     __controller: 'Controller'
     __scale_factor: float
-    __cache: [[Position]]
+    __cache: [[(int, int)]]
     __map_width: int
     __map_height: int
     __map_offset: int
@@ -24,6 +23,7 @@ class SensorsMapUI(Canvas):
     __square_width: int
     __offset_height: float
     __offset_width: float
+    __y_axis_inversion: bool
 
     def __init__(self, parent, controller: 'Controller'):
         super().__init__(parent, borderwidth=2, bg="white")
@@ -31,23 +31,16 @@ class SensorsMapUI(Canvas):
         self.__scale_factor = 1
         self.__map_width = 0
         self.__map_height = 0
-        self.__map_offset = 5
-        self.__offset_height = 0.0
-        self.__offset_width = 0.0
+        self.__offset_height: float
+        self.__offset_width: float
+        self.y_axis_inversion = True
 
-    def update_map_settings(self, height: int, width: int, square_height: int, square_width: int) -> None:
+    def update_map_settings(self, height: int, width: int,
+                            y_axis_inversion: bool) -> None:
 
         self.__map_width = width
         self.__map_height = height
-        self.__square_width = square_width + self.__map_offset
-        self.__square_height = square_height + self.__map_offset
-        self.__map_offset = max(square_height, square_width) // 2
-
-        self.__offset_width = (square_height / 2) + self.__map_offset
-        self.__offset_height = (square_height / 2) + self.__map_offset
-
-        self.__offset_width += self.__map_offset * 2
-        self.__offset_height += self.__map_offset * 2
+        self.__y_axis_inversion = y_axis_inversion
 
     def on_resize(self) -> None:
         self.update_scale_factor()
@@ -55,39 +48,63 @@ class SensorsMapUI(Canvas):
         self.delete('all')
         self.update()
 
-    def __draw_point(self, x: int, y: int, radius: int, color: str) -> None:
-        scaled_x = (x + self.__map_offset) * self.__scale_factor
-        scaled_y = (self.__map_height - y - self.__map_offset) * self.__scale_factor
-
-        scaled_radius = radius * self.__scale_factor
-
-        x1 = scaled_x - scaled_radius
-        y1 = scaled_y - scaled_radius
-        x2 = scaled_x + scaled_radius
-        y2 = scaled_y + scaled_radius
-        # Draw an oval in the given co-ordinates
-        self.create_oval(x1, y1, x2, y2, fill=color)
-
     def draw_sensor(self, index: int, color: str) -> None:
-        # Draw an oval in the given co-ordinates
-        pos1: Position = self.__cache[index][0]
-        pos2: Position = self.__cache[index][1]
-        self.create_rectangle(pos1.x, pos1.y, pos2.x, pos2.y, fill=color)
+        self.create_polygon(self.__cache[index], fill=color)
 
     def __calculate_cache(self):
         positions: [Position] = self.__controller.get_dataset().get_positions()
-        new_cache: [[Position]] = []
+        sensors_characteristics: [int, int, int] = self.__controller.get_dataset().get_sensors_characteristics()
+        new_cache: [[[int, int]]] = list(list())
 
-        scaled_width = self.__square_width * self.__scale_factor
-        scaled_height = self.__square_height * self.__scale_factor
+        print("RECALCULATE CACHE")
 
-        for pos in positions:
-            scaled_x = (pos.x + self.__map_offset) * self.__scale_factor
-            scaled_y = (self.__map_height - pos.y - self.__map_offset) * self.__scale_factor
+        for i in range(len(positions)):
 
-            new_cache.append([Position(scaled_x - scaled_width, scaled_y - scaled_height),
-                              Position(scaled_x + scaled_width, scaled_y + scaled_height)])
+            #   Scale sensor dimensions
+            scaled_width = sensors_characteristics[i][0] * self.__scale_factor
+            scaled_height = sensors_characteristics[i][1] * self.__scale_factor
 
+            #   Scale initial position
+            scaled_x = positions[i].x * self.__scale_factor
+
+            #   Need y-axis inversion ?
+            if self.__y_axis_inversion:
+                scaled_y = (self.__map_height - positions[i].y) * self.__scale_factor
+            else:
+                scaled_y = positions[i].y * self.__scale_factor
+
+            #   Calculate other points needed and cos and sin values to avoid repetitive calculation in the next part
+            s_x_1 = scaled_x + scaled_width
+            s_y_1 = scaled_y + scaled_height
+
+            alpha = math.radians(sensors_characteristics[i][2])
+            cos_alpha = math.cos(alpha)
+            sin_alpha = math.sin(alpha)
+
+            #   Initialize sensor array
+            new_cache.append([])
+
+            #   Add each coordinates points
+            #   A -- B
+            #   |    |
+            #   D -- C
+            #
+            #   A
+            new_cache[i].append([int(scaled_x * cos_alpha - scaled_y * sin_alpha),
+                                 int(scaled_x * sin_alpha + scaled_y * cos_alpha)])
+            #   B
+            new_cache[i].append([int(s_x_1 * cos_alpha - scaled_y * sin_alpha),
+                                 int(s_x_1 * sin_alpha + scaled_y * cos_alpha)])
+            #   C
+            new_cache[i].append([int(s_x_1 * cos_alpha - s_y_1 * sin_alpha),
+                                 int(s_x_1 * sin_alpha + s_y_1 * cos_alpha)])
+            #   D
+            new_cache[i].append([int(scaled_x * cos_alpha - s_y_1 * sin_alpha),
+                                 int(scaled_x * sin_alpha + s_y_1 * cos_alpha)])
+
+            #   For debugging purposes
+            #   print(i)
+            #   print(new_cache[i])
         return new_cache
 
     def update_cache(self):

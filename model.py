@@ -6,20 +6,35 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+from enum import Enum
 
 from dataset import DataSet
 from position import Position
 
 
+class PlaySpeed(Enum):
+    speed_00625 = [16, "x1/16"]
+    speed_0125 = [8, "x1/8"]
+    speed_025 = [4, "x1/4"]
+    speed_05 = [2, "x1/2"]
+    speed_1 = [1, "x1"]
+    speed_2 = [0.5, "x2"]
+    speed_3 = [0.25, "x3"]
+    speed_4 = [0.125, "x4"]
+    speed_8 = [0.0625, "x8"]
+
+
 class Model:
+
     __dataset: DataSet
     __controller: 'Controller'
     __current_step: int
     __step_number: int
     __is_reverse_enabled: bool
     __is_paused: bool
+    __is_rt_enabled: bool
+    __frame_time: float
     __play_speed: float
-    __play_speed_factor: float
 
     def __init__(self, dataset: DataSet, controller: 'Controller'):
         self.__dataset = dataset
@@ -28,8 +43,9 @@ class Model:
         self.__step_number = len(dataset.get_temporal_set())
         self.__is_reverse_enabled = False
         self.__is_paused = True
+        self.__is_rt_enabled = True
+        self.__frame_time = 0.1
         self.__play_speed = 1
-        self.__play_speed_factor = 1
 
     #   Get the full dataset (the object)
     def get_dataset(self) -> DataSet:
@@ -113,6 +129,11 @@ class Model:
         #   Normal
         return self.__get_delta_time_next()
 
+    def get_time_next(self):
+        if self.__is_rt_enabled:
+            return self.get_delta_time_next() * self.get_play_speed_factor()
+        return self.__frame_time
+
     #   Just pass to the next or previous step depending on the play direction
     def next_step(self) -> int:
         #   Pause
@@ -155,13 +176,28 @@ class Model:
     def is_normal_play(self) -> bool:
         return not self.__is_reverse_enabled
 
-    def get_play_speed(self) -> float:
-        return self.__play_speed
+    def get_play_speed(self) -> str:
+        index = list(PlaySpeed).index(self.__play_speed)
+        return list(PlaySpeed)[index].value[1]
 
     def get_play_speed_factor(self) -> float:
-        return self.__play_speed_factor
+        return self.__play_speed
 
     def set_play_speed(self, new_speed: float):
-        if 0.025 <= new_speed <= 2:
-            self.__play_speed = new_speed
-            self.__play_speed_factor = 1.5 - new_speed * 0.5
+        self.__play_speed = new_speed
+
+    def enable_realtime(self):
+        self.__is_rt_enabled = True
+
+    def enable_custom_delay(self):
+        self.__is_rt_enabled = False
+
+    def set_frame_time_value(self, new_value: float):
+        if new_value <= 0:
+            raise Exception("Frame time value must be positive and non null !")
+
+        self.__frame_time = new_value
+
+    def get_frame_time(self) -> float:
+        return self.__frame_time
+

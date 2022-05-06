@@ -16,13 +16,36 @@ def get_file(file_path: str, encoding: str = "ISO-8859-1"):
 #   Used to detect difference between a simple string and a string containing a int value
 def is_a_int_value(input: str) -> bool:
     #   Check the string with some regex
-    return regexp.match("^[0-9]+$", input) is not None
+    return regexp.match("^-?[0-9]+$", input) is not None
 
 
 #   Used to detect difference between a simple string and a string containing a float or int value
 def is_a_numerical_value(input: str) -> bool:
     #   Check the string with some regex
-    return regexp.match("^[0-9]+((.|,)[0-9]+)?$", input) is not None
+    return regexp.match("^-?[0-9]+((.|,)[0-9]+)?$", input) is not None
+
+
+#   Used to extract float or int value
+#   Will return None if no value was found
+def extract_numerical_value(input: str) -> float | int | None:
+    #   Extract value from string
+    regexp_extracted = regexp.search("-?[0-9]+((.|,)[0-9]+)?", input)
+
+    #   Check if the regexp found something else we quit
+    if regexp_extracted is None:
+        return None
+
+    resulted_str = regexp_extracted.string[regexp_extracted.regs[0][0]:regexp_extracted.regs[0][1]]
+
+    #   Check if the resulted string is a numerical value
+    if not is_a_numerical_value(resulted_str):
+        return None
+
+    #   Convert string to numerical value
+    if is_a_int_value(resulted_str):
+        return int(resulted_str)
+
+    return float(resulted_str)
 
 
 #   Used to know the number of sensors based on the first row of a CSV file
@@ -44,9 +67,9 @@ def get_sensor_number(csv_row: [str]) -> int:
 
 
 #   Used to get the index of the data column from the number of sensors and the first CSV row
-def get_situation_data_column_index(nb_of_sensors: int, csv_first_row: [str]) -> int:
+def get_next_data_column_index(last_column_index: int, csv_first_row: [str]) -> int:
     #   Skip temporal and sensors column
-    index = nb_of_sensors + 1
+    index = last_column_index + 1
     array_width = len(csv_first_row)
 
     #

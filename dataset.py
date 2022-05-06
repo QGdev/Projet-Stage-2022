@@ -21,16 +21,15 @@ class DataSet:
     __normalize_values: (float, float)
     __map_width: int
     __map_height: int
-    __figure_width: int
-    __figure_height: int
 
-    def __init__(self, temporal_set: [int], sensors_name: [str], sensors_position: [Position], sensors_data: [[float]],
+    def __init__(self, temporal_set: [int], sensors_name: [str], sensors_positions: [Position],
+                 sensors_characteristics: [[int, int, int]], sensors_data: [[float]],
                  map_width: int, map_height: int):
 
         #   Data consistency check:
         #   1 - sensors_name, sensors_data and temporal_set must have at least one element
         #   2 - Number of elements in sensors_name must be the same as the number of arrays in sensors_data and
-        #       the same number of position in sensors_position
+        #       the same number of position in sensors_position and in sensors_characteristics
         #   3 - The temporal_set cannot have negative values
         #   4 - Each sensor must have the same number of values as the others. (if there is more than one sensor)
         #   5 - Each provided positions must be in included in map bounds
@@ -41,7 +40,7 @@ class DataSet:
                 "Data consistency error: No enough data in the temporal set, sensors name set or sensors number !")
 
         #   Verification of the point 2
-        if len(sensors_name) != len(sensors_data) and len(sensors_data) != len(sensors_position):
+        if len(sensors_name) != len(sensors_data) and len(sensors_data) != len(sensors_positions):
             raise Exception(
                 "Data consistency error: Incompatibility between the number of sensors names, the number of sensors, the number of positions !")
 
@@ -71,8 +70,8 @@ class DataSet:
                 last_length = last_length_tmp
 
         #   Verification of the point 6 for each sensor
-        for i in range(0, len(sensors_position)):
-            if (0 > sensors_position[i].x > map_width) or (0 > sensors_position[i].y > map_height):
+        for i in range(0, len(sensors_positions)):
+            if (0 > sensors_positions[i].x > map_width) or (0 > sensors_positions[i].y > map_height):
                 raise Exception(
                     "Data consistency error: The position of the sensor #{:d} is out of map bounds !".format(i + 1))
 
@@ -81,8 +80,15 @@ class DataSet:
         self.__sensor_set = []
 
         for i in range(0, len(sensors_data)):
+            if sensors_characteristics[i][0] < 0 or sensors_characteristics[i][1] < 0:
+                raise Exception(
+                    "Data consistency error: Characteristics of the sensor #{:d} are invalid !".format(i + 1))
+
             self.__sensor_set.append(ForceSensor(sensors_name[i],
-                                                 sensors_position[i],
+                                                 sensors_positions[i],
+                                                 sensors_characteristics[i][0],
+                                                 sensors_characteristics[i][1],
+                                                 sensors_characteristics[i][2],
                                                  sensors_data[i]))
 
         self.__sensor_set_min = min([i.data_min for i in self.__sensor_set])
@@ -167,3 +173,8 @@ class DataSet:
 
     def get_sensors_min_denormalized(self) -> [float]:
         return [self.denormalize(sensor.get_min()) for sensor in self.__sensor_set]
+
+    def get_sensors_characteristics(self) -> [int, int, int]:
+        return [[sensor.get_width(),
+                 sensor.get_height(),
+                 sensor.get_angle()] for sensor in self.__sensor_set]

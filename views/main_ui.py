@@ -6,17 +6,18 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
-from tkinter import Frame, Menu, Toplevel, Label, Button, Radiobutton, StringVar, BooleanVar
+from tkinter import Frame, Menu, Toplevel, Label, Button, Radiobutton, StringVar, BooleanVar, Widget
 from tkinter import filedialog as fd
 
-from ui.control_panel_ui import ControlPanelUI
-from ui.sensors_map_ui import SensorsMapUI
+from views.control_panel_ui import ControlPanelUI
+from views.sensors_map_ui import SensorsMapUI
 
 
 class MainUI(Frame):
     __controller: 'Controller'
     __top_section: Frame
-    __sensors_map_ui: SensorsMapUI
+    __top_left_widget: Widget
+    __top_right_widget: Widget
     __control_panel_ui: ControlPanelUI
 
     def __init__(self, parent, controller: 'Controller'):
@@ -41,9 +42,13 @@ class MainUI(Frame):
     def get_top_section(self) -> Frame:
         return self.__top_section
 
-    def attach_sensors_map(self, sensors_map: SensorsMapUI) -> None:
-        self.__sensors_map_ui = sensors_map
-        self.__sensors_map_ui.grid(row=0, column=1, sticky='nwse')
+    def attach_top_left_widget(self, widget: Widget) -> None:
+        self.__top_left_widget = widget
+        self.__top_left_widget.grid(row=0, column=0, sticky='nwse')
+
+    def attach_top_right_widget(self, widget: Widget) -> None:
+        self.__top_right_widget = widget
+        self.__top_right_widget.grid(row=0, column=1, sticky='nwse')
 
     def attach_control_panel(self, control_panel: ControlPanelUI) -> None:
         self.__control_panel_ui = control_panel

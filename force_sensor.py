@@ -16,13 +16,19 @@ class ForceSensor:
     data_max: float
     data_min: float
     position: Position
+    width: int
+    height: int
+    angle: int
 
-    def __init__(self, name: str, position: Position, data: [float]):
+    def __init__(self, name: str, position: Position, width: int, height: int, angle: int, data: [float]):
         self.name = name
         self.data = data
         self.data_min = min(data)
         self.data_max = max(data)
         self.position = position
+        self.width = width
+        self.height = height
+        self.angle = angle
 
     def get_min(self) -> float:
         return self.data_min
@@ -41,6 +47,15 @@ class ForceSensor:
 
     def get_name(self) -> str:
         return self.name
+
+    def get_width(self) -> int:
+        return self.width
+
+    def get_height(self) -> int:
+        return self.height
+
+    def get_angle(self) -> int:
+        return self.angle
 
     def normalize_data(self, add_value: float, division_value: float) -> bool:
         #   Normalize each values
