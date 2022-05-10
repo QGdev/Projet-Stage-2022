@@ -33,7 +33,6 @@ class Model:
     __is_reverse_enabled: bool
     __is_paused: bool
     __is_rt_enabled: bool
-    __frame_time: float
     __play_speed: float
 
     def __init__(self, dataset: DataSet, controller: 'Controller'):
@@ -44,7 +43,6 @@ class Model:
         self.__is_reverse_enabled = False
         self.__is_paused = True
         self.__is_rt_enabled = True
-        self.__frame_time = 0.1
         self.__play_speed = 1
 
     #   Get the full dataset (the object)
@@ -77,19 +75,19 @@ class Model:
             return False
 
     #   To know if there is any other steps after
-    def __end_has_been_reached(self) -> bool:
+    def end_has_been_reached(self) -> bool:
         return (not self.__is_reverse_enabled) and self.__current_step >= self.__step_number - 1
 
     #   To know if there is any other steps before
-    def __start_has_been_reached(self) -> bool:
+    def start_has_been_reached(self) -> bool:
         return self.__is_reverse_enabled and self.__current_step <= 0
 
     def bound_reach(self):
-        return self.__start_has_been_reached() or self.__end_has_been_reached()
+        return self.start_has_been_reached() or self.end_has_been_reached()
 
     #   Calculate time delta between next and current step
     def __get_delta_time_next(self) -> int:
-        if not self.__end_has_been_reached():
+        if not self.end_has_been_reached():
             temporal_set = self.__dataset.get_temporal_set()
             return temporal_set[self.__current_step + 1] - temporal_set[self.__current_step]
         else:
@@ -97,7 +95,7 @@ class Model:
 
     #   Calculate time delta between current and previous step
     def __get_delta_time_prv(self) -> int:
-        if not self.__start_has_been_reached():
+        if not self.start_has_been_reached():
             temporal_set = self.__dataset.get_temporal_set()
             return temporal_set[self.__current_step] - temporal_set[self.__current_step - 1]
         else:
@@ -105,14 +103,14 @@ class Model:
 
     #   Just pass to the next step in the normal play mode
     def __next_step(self) -> bool:
-        if self.__end_has_been_reached():
+        if self.end_has_been_reached():
             return False
         self.__current_step += 1
         return True
 
     #   Just pass to the next step in the reverse play mode
     def __previous_step(self) -> bool:
-        if self.__start_has_been_reached():
+        if self.start_has_been_reached():
             return False
 
         self.__current_step -= 1
@@ -130,9 +128,7 @@ class Model:
         return self.__get_delta_time_next()
 
     def get_time_next(self):
-        if self.__is_rt_enabled:
-            return self.get_delta_time_next() * self.get_play_speed_factor()
-        return self.__frame_time
+        return self.get_delta_time_next() * self.get_play_speed_factor()
 
     #   Just pass to the next or previous step depending on the play direction
     def next_step(self) -> int:
@@ -145,10 +141,10 @@ class Model:
         #   Normal
         return self.__next_step()
 
-    def play_normal(self) -> None:
+    def normal(self) -> None:
         self.__is_reverse_enabled = False
 
-    def play_reverse(self) -> None:
+    def reverse(self) -> None:
         self.__is_reverse_enabled = True
 
     def pause(self) -> None:
@@ -189,15 +185,12 @@ class Model:
     def enable_realtime(self):
         self.__is_rt_enabled = True
 
-    def enable_custom_delay(self):
+    def enable_custom_speed_factor(self):
         self.__is_rt_enabled = False
 
-    def set_frame_time_value(self, new_value: float):
-        if new_value <= 0:
-            raise Exception("Frame time value must be positive and non null !")
+    def set_speed_factor_value(self, new_value: float):
+        if new_value is not None:
+            if new_value <= 0:
+                raise Exception("Frame time value must be positive and non null !")
 
-        self.__frame_time = new_value
-
-    def get_frame_time(self) -> float:
-        return self.__frame_time
-
+            self.__play_speed = new_value

@@ -7,9 +7,9 @@
 ------------------------------------------------------------------------------------------------------------------------
 """
 from tkinter import Frame, Toplevel, Label, Button, StringVar
+from tkinter.constants import DISABLED
 
 from dataset import DataSet
-from model import Model
 
 
 class ConfirmConfigPopUp(Toplevel):
@@ -145,6 +145,7 @@ class ConfirmConfigPopUp(Toplevel):
         #   Let the user adjust sensors configuration
         Button(self,
                text="Set configuration manually",
+               state=DISABLED,
                command=lambda: button_pressed.set("config")).grid(row=3,
                                                                   column=2,
                                                                   padx=20,

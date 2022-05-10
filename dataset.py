@@ -165,6 +165,9 @@ class DataSet:
     def get_sensors_min(self) -> [float]:
         return [sensor.get_min() for sensor in self.__sensor_set]
 
+    def get_sensors_values_at(self, index: int) -> [float]:
+        return [sensor.get_data_point(index) for sensor in self.__sensor_set]
+
     def denormalize(self, value: float) -> float:
         return value * self.__normalize_values[1] - self.__normalize_values[0]
 

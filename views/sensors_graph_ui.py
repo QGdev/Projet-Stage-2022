@@ -6,14 +6,13 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
-
-from tkinter import Tk, Frame, Menu, filedialog, Canvas, Label
+import time
+from tkinter import Canvas
 
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from scipy.ndimage.filters import gaussian_filter
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from scipy.ndimage import *
 
 from position import Position
 
@@ -40,48 +39,47 @@ class SensorsGraphUI(Canvas):
         self.__offset_height = 0.0
         self.__offset_width = 0.0
 
+    #
+    def points_to_gaussian_heatmap(self, centers, height, width):
+
+        start_time = time.time()
+        # create a grid of (x,y) coordinates at which to evaluate the kernels
+        a = np.empty((width, height))
+
+        a_ = time.time()-start_time
+        start_time = time.time()
+
+        for x_, y_, z_ in centers:
+            a[x_, y_]: int = z_
+
+        b_ = time.time()-start_time
+        start_time = time.time()
+
+        img = gaussian_filter(a, sigma=30, mode='nearest', cval=5)
+        c_ = time.time()-start_time
+
+        print(a_)
+        print(b_)
+        print(c_)
+
+        print(a_ + b_ + c_)
+
+        return img
+
     def plot(self):
         # the figure that will contain the plot
-        fig = Figure(figsize=(5, 7),
-                     dpi=75)
+        start_time = time.time()
 
-        """def heatmap2d(arr: np.ndarray):
-            plt.imshow(arr, cmap='viridis')
-            plt.colorbar()
-            plt.show()"""
+        img = self.points_to_gaussian_heatmap([(50, 50, 0.5), (75, 75, 0.5), (50, 250, 0.1), (250, 250, 1)],
+                                              300, 600)
+        fig = plt.figure(figsize=(2, 4), dpi=128)
+        plt.imshow(img, cmap='jet')
+        plt.axis('off')
 
-
-        b, a = np.meshgrid(np.linspace(-1, 1, 130), np.linspace(-1, 1, 130))
-        b = gaussian_filter(b, sigma=8)
-
-        c = (a ** 2 + b ** 2) * np.exp(-a ** 2 - b ** 2)
-        c = c[:-1, :-1]
-        l_a = a.min()
-        r_a = a.max()
-        l_b = b.min()
-        r_b = b.max()
-        l_c, r_c = -np.abs(c).max(), np.abs(c).max()
-
-        figure, axes = plt.subplots()
-
-        c = axes.pcolormesh(a, b, c, cmap='brg', vmin=l_c, vmax=r_c)
-        axes.set_title('Heatmap')
-        axes.axis([l_a, r_a, l_b, r_b])
-        figure.colorbar(c)
-
-        # adding the subplot
-        #plot1 = fig.add_subplot()
-
-        # plotting the graph
-        #plot1.plot(c)
-
-        # creating the Tkinter canvas
-        # containing the Matplotlib figure
-        #canvas = FigureCanvasTkAgg(figure, master=self)
-        #canvas.draw()
-
-        # placing the canvas on the Tkinter window
-        #canvas.get_tk_widget().pack()
+        canvas = FigureCanvasTkAgg(fig, master=self)
+        canvas.draw()
+        canvas.get_tk_widget().pack(expand=0)
+        print(time.time()-start_time)
 
     def update_map_settings(self, height: int, width: int, square_height: int, square_width: int) -> None:
 

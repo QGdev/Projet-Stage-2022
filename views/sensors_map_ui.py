@@ -15,7 +15,8 @@ from position import Position
 class SensorsMapUI(Canvas):
     __controller: 'Controller'
     __scale_factor: float
-    __cache: [[(int, int)]]
+    __cache_position: [[(int, int)]]
+    __svg_bg_path: str
     __map_width: int
     __map_height: int
     __map_offset: int
@@ -44,14 +45,19 @@ class SensorsMapUI(Canvas):
 
     def on_resize(self) -> None:
         self.update_scale_factor()
-        self.update_cache()
+        self.update_cache_position()
         self.delete('all')
         self.update()
 
-    def draw_sensor(self, index: int, color: str) -> None:
-        self.create_polygon(self.__cache[index], fill=color)
+    def draw_bg(self, drawing_data: [[[int, int]]]) -> None:
+        for poly in drawing_data:
+            self.create_polygon([[int(p[0] * self.__scale_factor), int(p[1] * self.__scale_factor)] for p in poly],
+                                fill="light grey", tags='bg')
 
-    def __calculate_cache(self):
+    def draw_sensor(self, index: int, color: str) -> None:
+        self.create_polygon(self.__cache_position[index], fill=color, tags='sensor')
+
+    def __calculate_cache_posisiton(self):
         positions: [Position] = self.__controller.get_dataset().get_positions()
         sensors_characteristics: [int, int, int] = self.__controller.get_dataset().get_sensors_characteristics()
         new_cache: [[[int, int]]] = list(list())
@@ -107,8 +113,8 @@ class SensorsMapUI(Canvas):
             #   print(new_cache[i])
         return new_cache
 
-    def update_cache(self):
-        self.__cache = self.__calculate_cache()
+    def update_cache_position(self):
+        self.__cache_position = self.__calculate_cache_posisiton()
 
     def update_scale_factor(self):
         #   Importation of used parameters to avoid long annoying code

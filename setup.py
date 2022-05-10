@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='Visualisation_Semelle',
     version='Alpha_9',
-    packages=['csv', 'matplotlib', 'svgpathtools', 'tkinter'],
+    packages=['scipy', 'csv', 'matplotlib', 'svgpathtools', 'tkinter'],
     url='',
     license='',
     author='Quentin GOMES DOS REIS',

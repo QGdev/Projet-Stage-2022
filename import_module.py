@@ -9,7 +9,7 @@
 import csv
 from xml.dom import minidom
 from enum import Enum
-
+import svg.path as svg
 
 from dataset import DataSet
 from position import Position
@@ -146,7 +146,7 @@ class DataImportModule:
                       svg_file_path: str,
                       on_delimiters_error: 'function',
                       on_position_error: 'function',
-                      on_error: 'function') -> Model | None:
+                      on_error: 'function'):
         try:
             #   Try to open each provided files to fail immediately if a file cannot be opened or if is unreadable
 
@@ -231,8 +231,8 @@ class DataImportModule:
             if map_width is None or map_height is None:
                 raise Exception("SVG LOADER: Error in map width or height value")
 
-            sensors_characteristics = [[] for i in range(nb_of_sensors)]
-            sensors_position: [Position | None] = [None for i in range(nb_of_sensors)]
+            sensors_characteristics = [[] for _ in range(nb_of_sensors)]
+            sensors_position: [Position | None] = [None for _ in range(nb_of_sensors)]
 
             #   Extract sensors positions and dimensions from svg
             rect_xml = svg_xml.getElementsByTagName("rect")
@@ -269,7 +269,15 @@ class DataImportModule:
                                                    sensors_characteristics, sensors_data,
                                                    map_width, map_height), self)
 
-            return self.__generated_model
+            svg_bg_xml = svg_xml.getElementsByTagName("path")
+
+            svg_bg_path = list()
+
+            for svg_bg in svg_bg_xml:
+                if svg_bg.attributes['id'].value == "BG_PATH":
+                    svg_bg_path.append(svg.parse_path(svg_bg.attributes['d'].value))
+
+            return self.__generated_model, svg_bg_path
 
 
         except Exception as e:
@@ -277,6 +285,6 @@ class DataImportModule:
             print("\tException: {0}".format(e))
 
             on_position_error(e)
-            #   raise e
+            raise e
             #   This will indicate an error during the deparsing
             return None

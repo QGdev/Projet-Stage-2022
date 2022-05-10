@@ -7,29 +7,56 @@
 ------------------------------------------------------------------------------------------------------------------------
 """
 import re as regexp
+from tkinter import Scale, Button, OptionMenu, Entry
+from tkinter.constants import DISABLED, NORMAL
+
+from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, Move, Close
 
 
 def get_file(file_path: str, encoding: str = "ISO-8859-1"):
     return open(file_path, newline='', encoding=encoding)
 
 
-#   Used to detect difference between a simple string and a string containing a int value
-def is_a_int_value(input: str) -> bool:
+#   Used to detect difference between a simple string and a string containing an int value
+def is_a_int_value(value: str) -> bool:
     #   Check the string with some regex
-    return regexp.match("^-?[0-9]+$", input) is not None
+    return regexp.match("^-?[0-9]+$", value) is not None
 
 
 #   Used to detect difference between a simple string and a string containing a float or int value
-def is_a_numerical_value(input: str) -> bool:
+def is_a_numerical_value(value: str) -> bool:
     #   Check the string with some regex
-    return regexp.match("^-?[0-9]+((.|,)[0-9]+)?$", input) is not None
+    return regexp.match("^-?[0-9]+((.|,)[0-9]+)?$", value) is not None
 
 
 #   Used to extract float or int value
 #   Will return None if no value was found
-def extract_numerical_value(input: str) -> float | int | None:
+def extract_numerical_value(value: str) -> float | int | None:
     #   Extract value from string
-    regexp_extracted = regexp.search("-?[0-9]+((.|,)[0-9]+)?", input)
+    regexp_extracted = regexp.search("-?[0-9]+((.|,)[0-9]+)?", value)
+
+    #   Check if the regexp found something else we quit
+    if regexp_extracted is None:
+        return None
+
+    resulted_str = regexp_extracted.string[regexp_extracted.regs[0][0]:regexp_extracted.regs[0][1]]
+
+    #   Check if the resulted string is a numerical value
+    if not is_a_numerical_value(resulted_str):
+        return None
+
+    #   Convert string to numerical value
+    if is_a_int_value(resulted_str):
+        return int(resulted_str)
+
+    return float(resulted_str)
+
+
+#   Used to extract positive float or int value
+#   Will return None if no value was found
+def extract_positive_numerical_value(value: str) -> float | int | None:
+    #   Extract value from string
+    regexp_extracted = regexp.search("[0-9]+((.|,)[0-9]+)?", value)
 
     #   Check if the regexp found something else we quit
     if regexp_extracted is None:
@@ -103,9 +130,129 @@ def get_color_from_gradient(value: float) -> tuple[int, int, int]:
         return 0, int(255 * (value / 0.5)), int(255 * (0.5 - value) / 0.5)
 
     #   For the last second half part
-    return int(255 * ((value - 0.5) / 0.5)), int(128 * abs(1 - value) / 0.5), 0
+    return int(255 * ((value - 0.5) / 0.5)), int(255 * abs(1 - value) / 0.5), 0
 
 
 #   Just a function to parse RGB values to Hex color code
 def get_color_hex(value: tuple[int, int, int]) -> str:
     return "#{:0>2X}{:0>2X}{:0>2X}".format(*value)
+
+
+def get_color_gradient_array(values: [float]) -> list[tuple[int, int, int]]:
+
+    generated_array = list()
+
+    for value in values:
+        generated_array.append(get_color_from_gradient(value))
+
+    return generated_array
+
+
+#   Just a function to parse RGB values to Hex color code
+def get_color_hex_array(values: list[tuple[int, int, int]]) -> [str]:
+
+    generated_array = list()
+
+    for value in values:
+        generated_array.append(get_color_hex(value))
+
+    return generated_array
+
+
+def update_slider_value(element: Scale, new_value: int | float) -> None:
+    element.set(new_value)
+
+
+def update_slider_max(element: Scale, new_value: int | float) -> None:
+    element.configure(to=new_value)
+
+
+def lock(element: Button | Scale | OptionMenu | Entry) -> None:
+    element['state'] = DISABLED
+
+
+def unlock(element: Button | Scale | OptionMenu | Entry) -> None:
+    element['state'] = NORMAL
+
+
+def svg_path_to_grp_pts(svg_path: Path) -> [[(int, int)]]:
+    #   Abort the process if there is no svg path
+    if svg_path.__len__() == 0:
+        return []
+
+    generated_array_pts = []
+    current_idx = 0
+    length = len(svg_path)
+
+    #   Decompose each svg instructions into a groups of points
+    for i in range(0, length):
+        crt = svg_path[i]
+        crt_type = type(crt)
+        x, y = int(crt.start.real), int(crt.start.imag)
+
+        if crt_type is Move:
+            generated_array_pts.append([(x, y)])
+
+        elif crt_type is Close:
+            generated_array_pts[current_idx].append((x, y))
+            current_idx += 1
+
+        elif crt_type is Line or crt_type is Arc or crt_type is CubicBezier or crt_type is QuadraticBezier:
+            generated_array_pts[current_idx].append((x, y))
+
+    return generated_array_pts
+
+
+def multiple_svg_path_to_grp_pts(svg_path_array: [Path]) -> [[(int, int)]]:
+    #   Abort the process if there is no svg path
+    if len(svg_path_array) == 0:
+        return []
+
+    generated_array_pts = []
+    current_idx = 0
+
+    #   Decompose each svg instructions into a groups of points
+    for path in svg_path_array:
+        length = len(path)
+
+        for i in range(0, length):
+            crt = path[i]
+            crt_type = type(crt)
+            x, y = int(crt.start.real), int(crt.start.imag)
+
+            if crt_type is Move:
+                generated_array_pts.append([(x, y)])
+
+            elif crt_type is Close:
+                generated_array_pts[current_idx].append((x, y))
+                current_idx += 1
+
+            elif crt_type is Line or crt_type is Arc or crt_type is CubicBezier or crt_type is QuadraticBezier:
+                generated_array_pts[current_idx].append((x, y))
+
+    return generated_array_pts
+
+
+def get_timestamp(value: float) -> (int, int, int, int):
+
+    value_int_ = int(value)
+
+    millis = int(value * 1000) % 1000
+    seconds = value_int_ % 60
+    minutes = value_int_ // 60 % 60
+    hours = value_int_ // 3600 % 24
+
+    return millis, seconds, minutes, hours
+
+
+def get_formatted_timestamp(value: (int, int, int, int)) -> str:
+    if value[2] == 0:
+        return "{:0>2d}.{:0>3d}".format(value[1], value[0])
+    elif value[3] == 0:
+        return "{:0>2d}:{:0>2d}.{:0>3d}".format(value[2], value[1], value[0])
+    else:
+        return "{:0>2d}:{:0>2d}:{:0>2d}.{:0>3d}".format(value[3], value[2], value[1], value[0])
+
+
+def get_formatted_timestamp_from_value(value: float) -> str:
+    return get_formatted_timestamp(get_timestamp(value))

@@ -21,7 +21,8 @@ from views.control_panel_ui import ControlPanelUI
 from views.main_ui import MainUI
 from views.sensors_graph_ui import SensorsGraphUI
 from views.sensors_map_ui import SensorsMapUI
-from utils import get_color_hex, get_color_from_gradient, extract_numerical_value
+from utils import multiple_svg_path_to_grp_pts, get_color_gradient_array, get_color_hex_array, \
+    get_formatted_timestamp_from_value, extract_positive_numerical_value
 
 
 class Controller:
@@ -35,15 +36,28 @@ class Controller:
     __thread_ask_stop_flag: bool
     __thread_ask_wait_flag: bool
     __thread_wait_status_flag: bool
+    __sensor_color_cache: [[str]]
+    __timestamp_cache: [str]
+    __bg_pts_grps: [[[int, int]]]
     __data_loaded: bool
+
+    """
+
+
+            CONTROLLER INITIALIZATION SECTION
+
+    """
 
     #   Controller constructor
     def __init__(self):
+        #   Init main window
         self.__window = tk.Tk(className="Soles Data Visualisation")
         self.__window.geometry("800x600")
         self.__window.wm_title("Soles Data Visualisation")
         self.__window.minsize(800, 600)
         self.__window.resizable(True, True)
+
+        #   Init toolbar and main ui
         self.__ui_init__()
         self.__toolbar_init__()
 
@@ -51,8 +65,15 @@ class Controller:
         self.__data_loaded = False
         self.__thread_ask_stop_flag = False
 
+    """
+
+
+            UI INITIALIZATION SECTION
+
+    """
+
     #   UI Element initialization
-    def __ui_init__(self):
+    def __ui_init__(self) -> None:
         self.__main_ui = MainUI(self.__window, self)
         self.__sensors_map = SensorsMapUI(self.__main_ui.get_top_section(), self)
         self.__control_panel = ControlPanelUI(self.__main_ui, self,
@@ -61,19 +82,20 @@ class Controller:
                                               self.__on_change_play_direction,
                                               self.__on_change_play_speed,
                                               self.__on_change_play_mode,
-                                              self.__on_change_frame_time)
+                                              self.__on_change_custom_time_coef)
 
         test = SensorsGraphUI(self.__main_ui.get_top_section(), self)
-        self.__main_ui.attach_top_left_widget(test)
-        test.plot()
+
 
         self.__main_ui.attach_top_right_widget(self.__sensors_map)
+        self.__main_ui.attach_top_left_widget(test)
         self.__main_ui.attach_control_panel(self.__control_panel)
 
+        test.plot()
         self.__main_ui.pack_top_section()
 
     #   Initialization of the menubar aka toolbar
-    def __toolbar_init__(self):
+    def __toolbar_init__(self) -> None:
         #   Declare menubar
         menubar = Menu(self.__window)
         self.__window.config(menu=menubar)
@@ -95,8 +117,15 @@ class Controller:
         #   Attach the file menu to the menubar
         menubar.add_cascade(label="File", menu=file_menu)
 
-    def on_import(self, import_type: DataImportModule.ImportTypes):
+    """
 
+
+            CONTROLLER CALLBACK FUNCTIONS INITIALIZATION SECTION
+
+    """
+
+    #   Will be executed when the user ask to import data into the software
+    def on_import(self, import_type: DataImportModule.ImportTypes) -> None:
         self.on_reset()
 
         #   Begin by ask the CSV file which will be  needed in both cases
@@ -118,17 +147,28 @@ class Controller:
                                                       lambda: self.__main_ui.ask_for_csv_settings([("Comma", ','),
                                                                                                    ("Semi-colon", ';'),
                                                                                                    ("Colon", '.'),
-                                                                                                   ("Tabulation", '\t')]),
+                                                                                                   ("Tabulation",
+                                                                                                    '\t')]),
                                                       #  On errors that cannot be handled
                                                       lambda x: messagebox.showerror("CSV ERROR",
-                                                                                     "An error occurred during the analysis of the given CSV file\n {0}".format(x)))
+                                                                                     "An error occurred during the analysis of the given CSV file\n {0}".format(
+                                                                                         x)))
+
+            #   An error or an user abortion happened during the import of the file
+            #   So we will stop the progression here
+            if self.__model is None:
+                return
+
+            #   For this type of import there is no bg "image"
+            self.__bg_pts_grps = None
+
         else:
             #   Begin by ask the CSV file which will be  needed in both cases
             filename_svg = fd.askopenfilename(
                 title='Open a SVG file',
                 initialdir='~/',
                 filetypes=(("SVG Files", ".svg"),))
-
+            print(filename_svg)
             #   The user didn't select anything or just close the dialog
             #   So we just abort the function
             if filename_svg == "" or filename_svg == "()":
@@ -136,24 +176,34 @@ class Controller:
                                      "You need to select an SVG file to continue")
                 return
 
-            self.__model = import_module.get_model_dsf(filename,
-                                                       filename_svg,
-                                                       #  On delimiter error, ask user to enter the delimiter
-                                                       lambda: self.__main_ui.ask_for_csv_settings([("Comma", ','),
-                                                                                                    ("Semi-colon", ';'),
-                                                                                                    ("Colon", '.'),
-                                                                                                    ("Tabulation", '\t')]),
-                                                       #  On errors that cannot be handled during SVG analysis
-                                                       lambda x: messagebox.showerror("ERROR",
-                                                                                      "An error occurred during the analysis of the given SVG file\n {0}".format(x)),
-                                                       #  On errors that cannot be handled during CSV analysis
-                                                       lambda x: messagebox.showerror("ERROR",
-                                                                                      "An error occurred during the analysis of the given CSV file\n {0}".format(x)))
+            importation_result = import_module.get_model_dsf(filename,
+                                                             filename_svg,
+                                                             #  On delimiter error, ask user to enter the delimiter
+                                                             lambda: self.__main_ui.ask_for_csv_settings(
+                                                                 [("Comma", ','),
+                                                                  ("Semi-colon", ';'),
+                                                                  ("Colon", '.'),
+                                                                  ("Tabulation",
+                                                                   '\t')]),
+                                                             #  On errors that cannot be handled during SVG analysis
+                                                             lambda x: messagebox.showerror("ERROR",
+                                                                                            "An error occurred during the analysis of the given SVG file\n {0}".format(
+                                                                                                x)),
+                                                             #  On errors that cannot be handled during CSV analysis
+                                                             lambda x: messagebox.showerror("ERROR",
+                                                                                            "An error occurred during the analysis of the given CSV file\n {0}".format(
+                                                                                                x)))
 
-        #   An error or an user abortion happened during the import of the file
-        #   So we will stop the progression here
-        if self.__model is None:
-            return
+            #   An error or an user abortion happened during the import of the files
+            #   So we will stop the progression here
+            if importation_result is None:
+                return
+
+            #   Decompose importation result
+            self.__model, svg_path_data = importation_result
+
+            self.__bg_pts_grps = None
+            self.__bg_pts_grps = multiple_svg_path_to_grp_pts(svg_path_data)
 
         #   Ask for a confirmation of the deparsed data
         ConfirmConfigPopUp(self.__main_ui,
@@ -164,80 +214,118 @@ class Controller:
                            self.__on_loading_cancel,
                            self.__on_manual_config).show(self.__model.get_dataset())
 
-    def on_reset(self):
+    #   Will be executed everytime the user ask to reset or everytime data is loaded
+    def on_reset(self) -> None:
         if self.__data_loaded:
             if self.__thread is not None:
                 self.__thread_ask_stop_flag = True
                 print("Thread killed...")
                 self.__thread.join()
             self.__control_panel.lock_interface()
-            self.__control_panel.update_actual_time(0)
-            self.__control_panel.update_end_time(0)
+
+            self.__control_panel.update_actual_time_label("00:00.000")
+            self.__control_panel.update_actual_time_scale(0)
+            self.__control_panel.update_end_time_label("00:00.000")
+            self.__control_panel.update_end_time_scale(1)
+
             del self.__model
             self.__sensors_map.delete('all')
 
-    def on_exit(self):
-        if self.__data_loaded:
-            if self.__thread is not None:
-                self.__thread_ask_stop_flag = True
-                print("Thread killed...")
-                self.__thread.join()
-            self.__control_panel.lock_interface()
-            self.__control_panel.update_actual_time(0)
-            self.__control_panel.update_end_time(0)
-            del self.__model
-            self.__sensors_map.delete('all')
+    def on_exit(self) -> None:
+        self.on_reset()
         self.__window.quit()
 
-
-    def __draw_sensors(self, sensors_number: int, sensors_data: [float]):
+    def __draw_sensors(self, sensors_number: int, sensors_color: [str]) -> None:
         for i in range(sensors_number):
-            self.__sensors_map.draw_sensor(i, get_color_hex(get_color_from_gradient(sensors_data[i])))
-        self.__sensors_map.update()
+            self.__sensors_map.draw_sensor(i, sensors_color[i])
 
-    def __executable_thread(self):
+    def __executable_thread(self) -> None:
         self.__thread_ask_stop_flag = False
 
         sensors_positions: [Position] = self.__model.get_positions()
         sensors_number: int = len(sensors_positions)
         sensors_data: [float]
 
-        self.__sensors_map.update_cache()
-
         #   Check for stop signal
         while not self.__thread_ask_stop_flag:
 
             #   Don't pass to the next step if the user have set visualization on pause
             if not self.__model.is_paused():
-                self.__draw_sensors(sensors_number, self.__model.get_current_step_data())
-                self.__control_panel.update_actual_time(self.__model.get_current_step_number())
 
-                time.sleep(self.__model.get_time_next())
+                start_time = time.time()
+
+                current_step = self.__model.get_current_step_number()
+                self.__draw_sensors(sensors_number, self.__sensor_color_cache[current_step])
+
+                self.__control_panel.update_actual_time_label(self.__timestamp_cache[current_step])
+                self.__control_panel.update_actual_time_scale(current_step)
+
+                if self.__model.bound_reach():
+                    self.__on_change_play_state()
+                else:
+                    sleep_time = self.__model.get_time_next() - (time.time() - start_time)
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
 
                 self.__model.next_step()
 
     #   Launch the data loading and initialisation processes
     def launch_thread(self) -> None:
-        self.__thread = threading.Thread(name='"visualization_handler"',
-                                         target=self.__executable_thread)
-        self.__control_panel.lock_normal_dir_button()
 
-        self.__sensors_map.update_scale_factor()
+        self.__thread = threading.Thread(name="visualization_handler",
+                                         target=self.__executable_thread)
         self.__thread.start()
-        self.__model.play_normal()
         self.__model.play()
 
+    """
+    
+        
+        CACHE GENERATION SECTION
+        
+    """
+
+    #   Will generate the cache containing each color value of each sensor at each period
+    def __update_colors_cache(self):
+        self.__sensor_color_cache = list()
+
+        for index in range(0, self.__model.get_steps_number()):
+            tmp = self.__model.get_dataset().get_sensors_values_at(index)
+            tmp = get_color_gradient_array(tmp)
+            self.__sensor_color_cache.append(get_color_hex_array(tmp))
+
+    #   Will generate the cache containing the formatted timestamp of each period
+    def __update_timestamps_cache(self):
+        self.__timestamp_cache = list()
+
+        temporal_set = self.get_dataset().get_temporal_set()
+
+        for value in temporal_set:
+            self.__timestamp_cache.append(get_formatted_timestamp_from_value(value))
+
     def __on_config_confirmed(self, y_axis_inverted: bool) -> None:
+
         self.__sensors_map.update_map_settings(self.get_dataset().get_map_height(),
                                                self.get_dataset().get_map_width(),
                                                y_axis_inverted)
         self.__data_loaded = True
-        self.launch_thread()
-        self.__control_panel.update_end_time(self.__model.get_steps_number() - 1)
+
+        self.__sensors_map.update_scale_factor()
+        self.__sensors_map.update_cache_position()
+
+        if self.__bg_pts_grps is not None:
+            self.__sensors_map.draw_bg(self.__bg_pts_grps)
+
+        self.__update_colors_cache()
+        self.__update_timestamps_cache()
+
+        self.__control_panel.update_end_time_label(self.__timestamp_cache[self.__model.get_steps_number() - 1])
+        self.__control_panel.update_end_time_scale(self.__model.get_steps_number() - 1)
         self.__control_panel.unlock_sliders()
         self.__control_panel.unlock_play_controls()
-        self.__control_panel.lock_normal_dir_button()
+        self.__control_panel.normal_dir_mode()
         self.__control_panel.realtime_mode()
+
+        self.launch_thread()
 
     def __on_loading_cancel(self) -> None:
         #   Model deletion
@@ -251,18 +339,22 @@ class Controller:
         #   Reset init flag(s)
         self.__data_loaded = False
 
-    def __on_manual_config(self):
+    def __on_manual_config(self) -> None:
         print("manual data config asked !")
         print("BUT WILL DO NOTHING FOR NOW !")
         #   TODO: implement on manual config
 
-    def on_resize(self, event: tk.Event):
+    def on_resize(self, _: tk.Event) -> None:
         self.__thread_ask_wait_flag = True
         if self.__data_loaded:
             self.__sensors_map.on_resize()
-        self.__thread_ask_wait_flag = False
 
-    def launch(self):
+            if self.__bg_pts_grps is not None:
+                self.__sensors_map.draw_bg(self.__bg_pts_grps)
+                self.__sensors_map.update()
+        self.__thread_ask_wait_flag = True
+
+    def launch(self) -> None:
         self.__window.mainloop()
 
     def get_dataset(self) -> DataSet:
@@ -274,12 +366,20 @@ class Controller:
     def __on_change_play_state(self) -> None:
         if self.__model.is_paused():
             self.__model.play()
+
+            if self.__model.bound_reach():
+                if self.__model.end_has_been_reached() and self.__model.is_normal_play():
+                    self.__on_change_play_direction("reverse")
+                else:
+                    self.__on_change_play_direction("normal")
+
             self.launch_thread()
         else:
             self.__model.pause()
             self.__thread_ask_stop_flag = True
 
     def __on_change_play_time(self, operation: str, new_time: int = -1) -> None:
+        self.__thread_ask_wait_flag = True
         if operation == "jump":
             if new_time > -1:
                 self.__model.jump_to_step(new_time)
@@ -297,52 +397,58 @@ class Controller:
 
             elif operation == "next_frame":
                 self.__model.jump_to_step(self.__model.get_current_step_number() + 1)
-
             else:
+                self.__thread_ask_stop_flag = False
                 raise Exception("on_change_play_time : UNSUPPORTED INSTRUCTION ({:s})".format(operation))
         else:
+            self.__thread_ask_stop_flag = False
             raise Exception("on_change_play_time : UNSUPPORTED INSTRUCTION ({:s})".format(operation))
 
+        self.__thread_ask_wait_flag = False
+
+        current_step_number = self.__model.get_current_step_number()
+
         self.__draw_sensors(len(self.__model.get_dataset().get_sensor_names()),
-                            self.__model.get_current_step_data())
-        self.__control_panel.update_actual_time(self.__model.get_current_step_number())
+                            self.__sensor_color_cache[current_step_number])
+
+        self.__control_panel.update_actual_time_scale(current_step_number)
+        self.__control_panel.update_actual_time_label(self.__timestamp_cache[current_step_number])
+
 
     def __on_change_play_direction(self, direction: str) -> None:
         if direction == "reverse":
-            self.__model.play_reverse()
+            self.__model.reverse()
             self.__control_panel.unlock_normal_dir_button()
             self.__control_panel.lock_reverse_dir_button()
         else:
-            self.__model.play_normal()
+            self.__model.normal()
             self.__control_panel.unlock_reverse_dir_button()
             self.__control_panel.lock_normal_dir_button()
 
-        self.__control_panel.update()
-
     def __on_change_play_speed(self, index: int) -> None:
         self.__model.set_play_speed(list(PlaySpeed)[index].value[0])
-        self.__control_panel.update()
+        self.__control_panel.set_custom_time_coef_entry_content(str(self.__model.get_play_speed_factor()))
 
     def __on_change_play_mode(self, operation: str) -> None:
         if operation == "real-time":
             self.__model.enable_realtime()
             self.__control_panel.realtime_mode()
         elif operation == "custom":
-            self.__model.enable_custom_delay()
-            self.__control_panel.custom_frame_time_mode()
+            self.__model.enable_custom_speed_factor()
+            self.__control_panel.custom_time_coef_mode()
         else:
             raise Exception("__on_change_play_mode : UNSUPPORTED INSTRUCTION ({:s})".format(operation))
         self.__control_panel.update()
 
-    def __on_change_frame_time(self, new_frame_time: str) -> None:
-        value = extract_numerical_value(new_frame_time)
+    def __on_change_custom_time_coef(self, new_frame_time: str) -> None:
+        value = extract_positive_numerical_value(new_frame_time)
         if value is None or value <= 0:
             messagebox.showerror("Wrong value entered",
                                  "The value can be a decimal point value but must be positive and non null")
             self.__control_panel.change_frame_time_entry_to_red()
             time.sleep(0.75)
-            self.__control_panel.reset_frame_time_entry_color()
-            self.__control_panel.set_frame_time_entry_content(self.__model.get_frame_time())
+            self.__control_panel.reset_custom_time_coef_entry_color()
+            self.__control_panel.set_custom_time_coef_entry_content(str(self.__model.get_play_speed_factor()))
 
-        self.__model.set_frame_time_value(value)
-        self.__control_panel.update()
+        else:
+            self.__model.set_speed_factor_value(value)
