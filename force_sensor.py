@@ -16,16 +16,18 @@ class ForceSensor:
     data_max: float
     data_min: float
     position: Position
+    center_position: Position
     width: int
     height: int
     angle: int
 
-    def __init__(self, name: str, position: Position, width: int, height: int, angle: int, data: [float]):
+    def __init__(self, name: str, position: Position, center_pos: Position, width: int, height: int, angle: int, data: [float]):
         self.name = name
         self.data = data
         self.data_min = min(data)
         self.data_max = max(data)
         self.position = position
+        self.center_position = center_pos
         self.width = width
         self.height = height
         self.angle = angle
@@ -44,6 +46,9 @@ class ForceSensor:
 
     def get_position(self) -> Position:
         return self.position
+
+    def get_center_position(self) -> Position:
+        return self.center_position
 
     def get_name(self) -> str:
         return self.name
@@ -70,6 +75,12 @@ class ForceSensor:
         #   Return the operation end status
         #   If the operation have succeeded new min and max must be contained in [0; 1]
         return self.data_min >= 0 and self.data_max <= 1
+
+    #   Will return characteristics as [width, height, angle]
+    def get_characteristics(self) -> [int, int, int]:
+        return [self.width,
+                self.height,
+                self.angle]
 
     def to_string(self) -> str:
         return "{0} : {1}\tmin:{2}\tmax:{3}\tdata:{4}".format(self.name, self.position.to_string(),

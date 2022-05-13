@@ -142,6 +142,9 @@ class ConfirmConfigPopUp(Toplevel):
                                                                   padx=20,
                                                                   pady=20,
                                                                   sticky='nswe')
+        """
+        DEACTIVATED BECAUSE UNIMPLEMENTED
+        TO DO: Implement modification of sensor configuration
         #   Let the user adjust sensors configuration
         Button(self,
                text="Set configuration manually",
@@ -151,6 +154,7 @@ class ConfirmConfigPopUp(Toplevel):
                                                                   padx=20,
                                                                   pady=20,
                                                                   sticky='nswe')
+        """
         #   Just launch the visualisation
         Button(self,
                text="Next",

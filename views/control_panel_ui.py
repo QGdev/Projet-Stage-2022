@@ -19,7 +19,7 @@ class ControlPanelUI(Frame):
     __on_change_play_direction: 'function'
     __on_change_play_speed: 'function'
     __on_change_play_mode: 'function'
-    __on_change_frame_time: 'function'
+    __on_change_custom_time_coef: 'function'
 
     __actual_time_label: Label
     __total_time_label: Label
@@ -52,7 +52,7 @@ class ControlPanelUI(Frame):
                  on_change_play_direction,
                  on_change_play_speed,
                  on_change_play_mode,
-                 on_change_frame_time):
+                 on_change_custom_time_coef):
 
         super().__init__(parent, borderwidth=2, bg="light grey")
         self.__controller = controller
@@ -62,7 +62,7 @@ class ControlPanelUI(Frame):
         self.__on_change_play_direction = on_change_play_direction
         self.__on_change_play_speed = on_change_play_speed
         self.__on_change_play_mode = on_change_play_mode
-        self.__on_change_frame_time = on_change_frame_time
+        self.__on_change_custom_time_coef = on_change_custom_time_coef
 
         self.__actual_time_var = IntVar()
         self.__total_time_var = IntVar()
@@ -129,7 +129,7 @@ class ControlPanelUI(Frame):
 
         self.__custom_speed_coef_entry = Entry(speed_control_frame, textvariable=self.__custom_speed_coef_entry_var)
         self.__custom_speed_coef_set_button = Button(speed_control_frame, text="SET",
-                                                     command=lambda: self.__on_change_frame_time(self.__custom_speed_coef_entry_var.get()))
+                                                     command=lambda: self.__on_change_custom_time_coef(self.__custom_speed_coef_entry_var.get()))
 
         #   Disposition of all elements
         self.__actual_time_label.grid(column=0, row=0, sticky='nwse', ipadx=5, padx=5, pady=5)

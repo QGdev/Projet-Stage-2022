@@ -146,6 +146,7 @@ class DataImportModule:
                       svg_file_path: str,
                       on_delimiters_error: 'function',
                       on_position_error: 'function',
+                      on_no_bg_path_found: 'function',
                       on_error: 'function'):
         try:
             #   Try to open each provided files to fail immediately if a file cannot be opened or if is unreadable
@@ -265,17 +266,25 @@ class DataImportModule:
                                                    int(extract_numerical_value(rect.attributes["y"].value)))
 
             #   Initialise a dataset
-            self.__generated_model = Model(DataSet(temporal_set, sensors_name, sensors_position,
-                                                   sensors_characteristics, sensors_data,
-                                                   map_width, map_height), self)
+            self.__generated_model = Model(DataSet(temporal_set,
+                                                   sensors_name,
+                                                   sensors_position,
+                                                   sensors_characteristics,
+                                                   sensors_data,
+                                                   map_width,
+                                                   map_height), self)
 
             svg_bg_xml = svg_xml.getElementsByTagName("path")
-
             svg_bg_path = list()
 
-            for svg_bg in svg_bg_xml:
-                if svg_bg.attributes['id'].value == "BG_PATH":
-                    svg_bg_path.append(svg.parse_path(svg_bg.attributes['d'].value))
+            if len(svg_bg_xml) > 0:
+                try:
+                    for svg_bg in svg_bg_xml:
+                        if svg_bg.attributes['id'].value == "BG_PATH":
+                            svg_bg_path.append(svg.parse_path(svg_bg.attributes['d'].value))
+
+                except KeyError as e:
+                    on_no_bg_path_found()
 
             return self.__generated_model, svg_bg_path
 

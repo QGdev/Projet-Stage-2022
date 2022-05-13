@@ -6,13 +6,20 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+import math
 import time
+from copy import copy
+from sys import getsizeof
 from tkinter import Canvas
 
+import cv2
 import numpy as np
+import scipy.stats
+from cv2 import BORDER_REPLICATE
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from scipy.ndimage import *
+from scipy import sparse
+from scipy.ndimage import gaussian_filter
 
 from position import Position
 
@@ -20,42 +27,51 @@ from position import Position
 class SensorsGraphUI(Canvas):
     __controller: 'Controller'
     __scale_factor: float
-    __cache: [[Position]]
-    __map_width: int
-    __map_height: int
-    __map_offset: int
-    __square_height: int
-    __square_width: int
-    __offset_height: float
-    __offset_width: float
+    __cache_sensors_positions: [[(int, int)]]
+    __graph_width: int
+    __graph_height: int
+
+    __graph_gen_width: int
+    __graph_gen_height: int
+
+    __kern_width: int
+    __kern_height: int
+
+    __y_axis_inversion: bool
 
     def __init__(self, parent, controller: 'Controller'):
         super().__init__(parent, borderwidth=2, bg="white")
         self.__controller = controller
         self.__scale_factor = 1
-        self.__map_width = 0
-        self.__map_height = 0
-        self.__map_offset = 5
-        self.__offset_height = 0.0
-        self.__offset_width = 0.0
+        self.__graph_width = 0
+        self.__graph_height = 0
 
     #
-    def points_to_gaussian_heatmap(self, centers, height, width):
+    #   Only tests for now !
+    #
+    def points_to_gaussian_heatmap(self, centers: [int, int], sensors_values: [int], width, height):
+
+        if len(centers) != len(sensors_values):
+            raise Exception("Number of sensors positions must be the same as the number of sensors values !")
 
         start_time = time.time()
         # create a grid of (x,y) coordinates at which to evaluate the kernels
-        a = np.empty((width, height))
+        a = np.empty((height, width))
 
         a_ = time.time()-start_time
         start_time = time.time()
 
-        for x_, y_, z_ in centers:
-            a[x_, y_]: int = z_
+        for i in range(len(centers)):
+            a[int((centers[i][1]) * 0.7 + 0.15 * height),
+              int((width - centers[i][0]) * 0.7 + 0.15 * width)] = float(sensors_values[i])
 
         b_ = time.time()-start_time
         start_time = time.time()
 
-        img = gaussian_filter(a, sigma=30, mode='nearest', cval=5)
+        img = cv2.GaussianBlur(a, (61, 61), borderType=BORDER_REPLICATE, sigmaX=16, sigmaY=16)
+
+        img[img < 1.2e-4] = 0
+
         c_ = time.time()-start_time
 
         print(a_)
@@ -70,55 +86,124 @@ class SensorsGraphUI(Canvas):
         # the figure that will contain the plot
         start_time = time.time()
 
-        img = self.points_to_gaussian_heatmap([(50, 50, 0.5), (75, 75, 0.5), (50, 250, 0.1), (250, 250, 1)],
-                                              300, 600)
-        fig = plt.figure(figsize=(2, 4), dpi=128)
-        plt.imshow(img, cmap='jet')
+        img = self.points_to_gaussian_heatmap([[140, 550], [85, 165], [185, 150], [285, 110]],
+                                              [1, 1, 1, 1],
+                                              325, 650)
+        """
+
+        fig = plt.figure(figsize=(1, 5), dpi=256)
+
+        palette = copy(plt.get_cmap('jet'))
+        palette.set_under('white', 0)
+
+        plt.imshow(img, cmap=palette)
+        plt.clim(vmin=1.2e-4, vmax=6.229835807198149e-4)
+        plt.autoscale(True)
+
         plt.axis('off')
 
         canvas = FigureCanvasTkAgg(fig, master=self)
         canvas.draw()
-        canvas.get_tk_widget().pack(expand=0)
+        canvas.get_tk_widget().pack(expand=1)
+
         print(time.time()-start_time)
+        print(getsizeof(img))
+        print(img)
+        x = scipy.sparse.csc_matrix(img)
+        print(x)
+        a = scipy.sparse.csr_matrix(img)
+        print(getsizeof(a))
+        print(a)
+        b = scipy.sparse.dok_matrix(img)
+        print(getsizeof(b))
+        print(b)
+        c = scipy.sparse.bsr_matrix(img)
+        print(getsizeof(c))
+        print(c)
+        d = scipy.sparse.coo_matrix(img)
+        print(getsizeof(d))
+        print(d)
+        pass
+        """
 
-    def update_map_settings(self, height: int, width: int, square_height: int, square_width: int) -> None:
-
-        self.__map_width = width
-        self.__map_height = height
-        self.__square_width = square_width + self.__map_offset
-        self.__square_height = square_height + self.__map_offset
-        self.__map_offset = max(square_height, square_width) // 2
-
-        self.__offset_width = (square_height / 2) + self.__map_offset
-        self.__offset_height = (square_height / 2) + self.__map_offset
-
-        self.__offset_width += self.__map_offset * 2
-        self.__offset_height += self.__map_offset * 2
+    def update_graph_settings(self, height: int, width: int,
+                                y_axis_inversion: bool) -> None:
+        self.__graph_width = width
+        self.__graph_height = height
+        self.__y_axis_inversion = y_axis_inversion
 
     def on_resize(self) -> None:
         self.update_scale_factor()
-        self.update_cache()
+        self.update_cache_position()
         self.delete('all')
         self.update()
 
-    def __calculate_cache(self):
+    def draw_bg(self, drawing_data: [[[int, int]]]) -> None:
+        for poly in drawing_data:
+            self.create_polygon([[int(p[0] * self.__scale_factor), int(p[1] * self.__scale_factor)] for p in poly],
+                                stipple='gray75', fill="grey", tags='bg')
+
+    def draw_sensor(self, index: int, color: str) -> None:
+        self.create_polygon(self.__cache_position[index], fill=color, tags='sensor')
+
+    def __calculate_cache_position(self):
         positions: [Position] = self.__controller.get_dataset().get_positions()
-        new_cache: [[Position]] = []
+        sensors_characteristics: [int, int, int] = self.__controller.get_dataset().get_sensors_characteristics()
+        new_cache: [[[int, int]]] = list(list())
 
-        scaled_width = self.__square_width * self.__scale_factor
-        scaled_height = self.__square_height * self.__scale_factor
+        print("RECALCULATE CACHE")
 
-        for pos in positions:
-            scaled_x = (pos.x + self.__map_offset) * self.__scale_factor
-            scaled_y = (self.__map_height - pos.y - self.__map_offset) * self.__scale_factor
+        for i in range(len(positions)):
 
-            new_cache.append([Position(scaled_x - scaled_width, scaled_y - scaled_height),
-                              Position(scaled_x + scaled_width, scaled_y + scaled_height)])
+            #   Scale sensor dimensions
+            scaled_width = sensors_characteristics[i][0] * self.__scale_factor
+            scaled_height = sensors_characteristics[i][1] * self.__scale_factor
 
+            #   Scale initial position
+            scaled_x = positions[i].x * self.__scale_factor
+
+            #   Need y-axis inversion ?
+            if self.__y_axis_inversion:
+                scaled_y = (self.__map_height - positions[i].y) * self.__scale_factor
+            else:
+                scaled_y = positions[i].y * self.__scale_factor
+
+            #   Calculate other points needed and cos and sin values to avoid repetitive calculation in the next part
+            s_x_1 = scaled_x + scaled_width
+            s_y_1 = scaled_y + scaled_height
+
+            alpha = math.radians(sensors_characteristics[i][2])
+            cos_alpha = math.cos(alpha)
+            sin_alpha = math.sin(alpha)
+
+            #   Initialize sensor array
+            new_cache.append([])
+
+            #   Add each coordinates points
+            #   A -- B
+            #   |    |
+            #   D -- C
+            #
+            #   A
+            new_cache[i].append([int(scaled_x * cos_alpha - scaled_y * sin_alpha),
+                                 int(scaled_x * sin_alpha + scaled_y * cos_alpha)])
+            #   B
+            new_cache[i].append([int(s_x_1 * cos_alpha - scaled_y * sin_alpha),
+                                 int(s_x_1 * sin_alpha + scaled_y * cos_alpha)])
+            #   C
+            new_cache[i].append([int(s_x_1 * cos_alpha - s_y_1 * sin_alpha),
+                                 int(s_x_1 * sin_alpha + s_y_1 * cos_alpha)])
+            #   D
+            new_cache[i].append([int(scaled_x * cos_alpha - s_y_1 * sin_alpha),
+                                 int(scaled_x * sin_alpha + s_y_1 * cos_alpha)])
+
+            #   For debugging purposes
+            #   print(i)
+            #   print(new_cache[i])
         return new_cache
 
-    def update_cache(self):
-        self.__cache = self.__calculate_cache()
+    def update_cache_position(self):
+        self.__cache_position = self.__calculate_cache_position()
 
     def update_scale_factor(self):
         #   Importation of used parameters to avoid long annoying code

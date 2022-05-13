@@ -8,6 +8,7 @@
 """
 import math
 from tkinter import Canvas
+from tkinter.font import Font
 
 from position import Position
 
@@ -15,7 +16,9 @@ from position import Position
 class SensorsMapUI(Canvas):
     __controller: 'Controller'
     __scale_factor: float
-    __cache_position: [[(int, int)]]
+    __cache_sensors_positions: [[(int, int)]]
+    __cache_c_o_m_positions: [(int, int)]
+    __com_font: Font
     __svg_bg_path: str
     __map_width: int
     __map_height: int
@@ -29,6 +32,7 @@ class SensorsMapUI(Canvas):
     def __init__(self, parent, controller: 'Controller'):
         super().__init__(parent, borderwidth=2, bg="white")
         self.__controller = controller
+        self.__com_font = Font(family='arial', size=30, weight='bold')
         self.__scale_factor = 1
         self.__map_width = 0
         self.__map_height = 0
@@ -51,15 +55,18 @@ class SensorsMapUI(Canvas):
 
     def draw_bg(self, drawing_data: [[[int, int]]]) -> None:
         for poly in drawing_data:
-            self.create_polygon([[int(p[0] * self.__scale_factor), int(p[1] * self.__scale_factor)] for p in poly],
-                                fill="light grey", tags='bg')
+            pts: [[int, int]] = [[int(p[0] * self.__scale_factor), int(p[1] * self.__scale_factor)] for p in poly]
+            self.create_polygon(pts, fill="silver", tags='bg')
 
     def draw_sensor(self, index: int, color: str) -> None:
-        self.create_polygon(self.__cache_position[index], fill=color, tags='sensor')
+        self.create_polygon(self.__cache_sensors_positions[index], fill=color, tags='sensor')
 
-    def __calculate_cache_posisiton(self):
-        positions: [Position] = self.__controller.get_dataset().get_positions()
-        sensors_characteristics: [int, int, int] = self.__controller.get_dataset().get_sensors_characteristics()
+    def draw_center_of_mass(self, index: int, color: str) -> None:
+        self.delete('com')
+        self.create_text(self.__cache_c_o_m_positions[index], font=self.__com_font, tags='com', text='+')
+
+    def __calculate_cache_position(self, positions: [Position],
+                                   sensors_characteristics: [int, int, int]) -> [[[int, int]]]:
         new_cache: [[[int, int]]] = list(list())
 
         print("RECALCULATE CACHE")
@@ -113,8 +120,31 @@ class SensorsMapUI(Canvas):
             #   print(new_cache[i])
         return new_cache
 
+    def __calculate_cache_c_o_m_position(self, positions: [Position]) -> [[int, int]]:
+        new_cache: [[int, int]] = list(list())
+
+        print("RECALCULATE C_O_M CACHE")
+
+        for i in range(len(positions)):
+
+            #   Scale initial position
+            scaled_x = positions[i].x * self.__scale_factor
+
+            #   Need y-axis inversion ?
+            if self.__y_axis_inversion:
+                scaled_y = (self.__map_height - positions[i].y) * self.__scale_factor
+            else:
+                scaled_y = positions[i].y * self.__scale_factor
+
+            #   Initialize sensor array
+            new_cache.append([scaled_x, scaled_y])
+
+        return new_cache
+
     def update_cache_position(self):
-        self.__cache_position = self.__calculate_cache_posisiton()
+        self.__cache_sensors_positions = self.__calculate_cache_position(self.__controller.get_dataset().get_positions(),
+                                                                         self.__controller.get_dataset().get_sensors_characteristics())
+        self.__cache_c_o_m_positions = self.__calculate_cache_c_o_m_position(self.__controller.get_dataset().get_c_o_m_positions())
 
     def update_scale_factor(self):
         #   Importation of used parameters to avoid long annoying code

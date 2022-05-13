@@ -31,7 +31,7 @@ class Controller:
     __sensors_map: SensorsMapUI
     __control_panel: ControlPanelUI
 
-    __model: 'Model'
+    __model: Model | None
     __thread: threading.Thread
     __thread_ask_stop_flag: bool
     __thread_ask_wait_flag: bool
@@ -58,7 +58,7 @@ class Controller:
         self.__window.resizable(True, True)
 
         #   Init toolbar and main ui
-        self.__ui_init__()
+        self.__init_ui__()
         self.__toolbar_init__()
 
         self.__window.bind('<Configure>', self.on_resize)
@@ -73,7 +73,7 @@ class Controller:
     """
 
     #   UI Element initialization
-    def __ui_init__(self) -> None:
+    def __init_ui__(self) -> None:
         self.__main_ui = MainUI(self.__window, self)
         self.__sensors_map = SensorsMapUI(self.__main_ui.get_top_section(), self)
         self.__control_panel = ControlPanelUI(self.__main_ui, self,
@@ -85,7 +85,6 @@ class Controller:
                                               self.__on_change_custom_time_coef)
 
         test = SensorsGraphUI(self.__main_ui.get_top_section(), self)
-
 
         self.__main_ui.attach_top_right_widget(self.__sensors_map)
         self.__main_ui.attach_top_left_widget(test)
@@ -137,6 +136,8 @@ class Controller:
         #   The user didn't select anything or just close the dialog
         #   So we just abort the function
         if filename == "" or filename == "()":
+            messagebox.showerror("CSV file needed",
+                                 "You need to select an CSV file to continue")
             return
 
         import_module: DataImportModule = DataImportModule()
@@ -172,7 +173,7 @@ class Controller:
             #   The user didn't select anything or just close the dialog
             #   So we just abort the function
             if filename_svg == "" or filename_svg == "()":
-                messagebox.showerror("CSV file needed",
+                messagebox.showerror("SVG file needed",
                                      "You need to select an SVG file to continue")
                 return
 
@@ -187,12 +188,13 @@ class Controller:
                                                                    '\t')]),
                                                              #  On errors that cannot be handled during SVG analysis
                                                              lambda x: messagebox.showerror("ERROR",
-                                                                                            "An error occurred during the analysis of the given SVG file\n {0}".format(
-                                                                                                x)),
+                                                                                            "An error occurred during the analysis of the given SVG file\n {0}".format(x)),
+                                                             #  When no background path has been found
+                                                             lambda : messagebox.showinfo("No background found",
+                                                                                          "The analysis of the SVG haven't revealed background path, don't forget to put \"BG_PATH\" in the id of the path to get a background"),
                                                              #  On errors that cannot be handled during CSV analysis
                                                              lambda x: messagebox.showerror("ERROR",
-                                                                                            "An error occurred during the analysis of the given CSV file\n {0}".format(
-                                                                                                x)))
+                                                                                            "An error occurred during the analysis of the given CSV file\n {0}".format(x)))
 
             #   An error or an user abortion happened during the import of the files
             #   So we will stop the progression here
@@ -228,7 +230,7 @@ class Controller:
             self.__control_panel.update_end_time_label("00:00.000")
             self.__control_panel.update_end_time_scale(1)
 
-            del self.__model
+            self.__model = None
             self.__sensors_map.delete('all')
 
     def on_exit(self) -> None:
@@ -256,6 +258,7 @@ class Controller:
 
                 current_step = self.__model.get_current_step_number()
                 self.__draw_sensors(sensors_number, self.__sensor_color_cache[current_step])
+                self.__sensors_map.draw_center_of_mass(current_step, "black")
 
                 self.__control_panel.update_actual_time_label(self.__timestamp_cache[current_step])
                 self.__control_panel.update_actual_time_scale(current_step)
@@ -341,7 +344,7 @@ class Controller:
 
     def __on_manual_config(self) -> None:
         print("manual data config asked !")
-        print("BUT WILL DO NOTHING FOR NOW !")
+        print("NOT IMPLEMENTED !")
         #   TODO: implement on manual config
 
     def on_resize(self, _: tk.Event) -> None:
@@ -351,7 +354,12 @@ class Controller:
 
             if self.__bg_pts_grps is not None:
                 self.__sensors_map.draw_bg(self.__bg_pts_grps)
-                self.__sensors_map.update()
+
+            current_step = self.__model.get_current_step_number()
+            self.__draw_sensors(len(self.get_dataset().get_sensor_names()),
+                                self.__sensor_color_cache[current_step])
+            self.__sensors_map.draw_center_of_mass(current_step, "black")
+
         self.__thread_ask_wait_flag = True
 
     def launch(self) -> None:
@@ -410,6 +418,7 @@ class Controller:
 
         self.__draw_sensors(len(self.__model.get_dataset().get_sensor_names()),
                             self.__sensor_color_cache[current_step_number])
+        self.__sensors_map.draw_center_of_mass(current_step_number, "black")
 
         self.__control_panel.update_actual_time_scale(current_step_number)
         self.__control_panel.update_actual_time_label(self.__timestamp_cache[current_step_number])

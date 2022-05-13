@@ -6,11 +6,14 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+import math
 import re as regexp
 from tkinter import Scale, Button, OptionMenu, Entry
 from tkinter.constants import DISABLED, NORMAL
 
 from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, Move, Close
+
+from position import Position
 
 
 def get_file(file_path: str, encoding: str = "ISO-8859-1"):
@@ -256,3 +259,18 @@ def get_formatted_timestamp(value: (int, int, int, int)) -> str:
 
 def get_formatted_timestamp_from_value(value: float) -> str:
     return get_formatted_timestamp(get_timestamp(value))
+
+
+def get_sensor_center_position(position: Position, sensor_characteristics: [int, int, int]) -> [Position]:
+
+    #   Calculate each coordinates needed to avoid repetitive calculations
+    x_ = position.x + sensor_characteristics[0] // 2
+    y_ = position.y + sensor_characteristics[1] // 2
+
+    alpha = math.radians(sensor_characteristics[2])
+    cos_alpha = math.cos(alpha)
+    sin_alpha = math.sin(alpha)
+
+    #   Initialize position
+    return Position(int(x_ * cos_alpha - y_ * sin_alpha),
+                    int(x_ * sin_alpha + y_ * cos_alpha))
