@@ -64,7 +64,7 @@ class Model:
     #   Get an array of the data of all sensors at the current step
     def get_current_step_data(self) -> [float]:
         sensor_set = self.__dataset.get_sensor_set()
-        return [sensor.get_data_point(self.__current_step) for sensor in sensor_set]
+        return [sensor.get_data_point_normalized(self.__current_step) for sensor in sensor_set]
 
     #   Allow jumping directly to a specified step
     def jump_to_step(self, new_step: int) -> bool:

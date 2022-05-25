@@ -8,7 +8,7 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
-from tkinter import Frame, Toplevel, Label, Button, StringVar
+from tkinter import Toplevel
 
 from dataset import DataSet
 

@@ -115,7 +115,7 @@ def get_next_data_column_index(last_column_index: int, csv_first_row: [str]) -> 
 
 
 #   A color gradient that will be #0000FF -> #008000 -> #FF0000 when the provided value is in [0;1]
-def get_color_from_gradient(value: float) -> tuple[int, int, int]:
+def get_color_gradient(value: float) -> tuple[int, int, int]:
     #   Value below the lower bound
     if value < 0:
         return 0, 0, 255
@@ -141,12 +141,34 @@ def get_color_hex(value: tuple[int, int, int]) -> str:
     return "#{:0>2X}{:0>2X}{:0>2X}".format(*value)
 
 
+#   A color gradient that will be #0000FF -> #008000 -> #FF0000 when the provided value is in [0;1]
+def get_color_gradient_graph(value: float, lower_alpha: int) -> (int, int, int, int):
+    #   Value below the lower bound
+    if value == 0:
+        return 255, 255, 255, 0
+
+    #   Value above the upper bound
+    if value > 1:
+        return 0, 0, 255, 255
+
+    #   Value is in the middle
+    if value == 0.5:
+        return 0, 255, 0, 255
+
+    #   For the first half part
+    if value < 0.5:
+        return 0, int(255 * (value / 0.5)), int(255 * (0.5 - value) / 0.5), 255
+
+    #   For the last second half part
+    return int(255 * ((value - 0.5) / 0.5)), int(255 * abs(1 - value) / 0.5), 0, 255
+
+
 def get_color_gradient_array(values: [float]) -> list[tuple[int, int, int]]:
 
     generated_array = list()
 
     for value in values:
-        generated_array.append(get_color_from_gradient(value))
+        generated_array.append(get_color_gradient(value))
 
     return generated_array
 
@@ -274,3 +296,10 @@ def get_sensor_center_position(position: Position, sensor_characteristics: [int,
     #   Initialize position
     return Position(int(x_ * cos_alpha - y_ * sin_alpha),
                     int(x_ * sin_alpha + y_ * cos_alpha))
+
+
+def a_in_bounds(a: int|float, b1: int|float, b2: int|float) -> bool:
+    return b1 <= a <= b2
+
+def a_or_b_in_bounds(a: int|float, b: int|float, c1: int|float, c2: int|float) -> bool:
+    return a_in_bounds(a, c1, c2) or a_in_bounds(b, c1, c2)

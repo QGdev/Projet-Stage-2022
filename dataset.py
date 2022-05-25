@@ -17,11 +17,15 @@ class DataSet:
     __sensor_set: [ForceSensor]
     __sensor_set_max: float
     __sensor_set_min: float
-    __temporal_set: [int]
+    __sensor_set_max_norm: float
+    __sensor_set_min_norm: float
     __is_normalized: bool
-    __normalized_values: (float, float)
+
+    __temporal_set: [float]
+
     __center_of_mass_positions_calculated: bool
     __center_of_mass_positions: [Position]
+
     __map_width: int
     __map_height: int
 
@@ -34,8 +38,9 @@ class DataSet:
         #   2 - Number of elements in sensors_name must be the same as the number of arrays in sensors_data and
         #       the same number of position in sensors_position and in sensors_characteristics
         #   3 - The temporal_set cannot have negative values
-        #   4 - Each sensor must have the same number of values as the others. (if there is more than one sensor)
-        #   5 - Each provided positions must be in included in map bounds
+        #   4 - The temporal_set must have chronological values in increasingly way
+        #   5 - Each sensor must have the same number of values as the others. (if there is more than one sensor)
+        #   6 - Each provided positions must be in included in map bounds
 
         #   Verification of the point 1
         if len(temporal_set) < 1 or len(sensors_name) < 1 or len(sensors_data) < 1:
@@ -52,12 +57,18 @@ class DataSet:
             raise Exception(
                 "Data consistency error: Temporal set inconsistency, cannot have negative values in temporal set !")
 
-        #   Verification of the point 4 only for the first sensor
+        #   Verification of the point 4
+        tmp_value = temporal_set[0]
+        for i in range(1, len(temporal_set)):
+            if tmp_value > temporal_set[i]:
+                raise Exception("Data consistency error: Temporal set inconsistency, not chronological !")
+
+        #   Verification of the point 5 only for the first sensor
         if len(sensors_data[0]) < 1:
             raise Exception(
                 "Data consistency error: No enough data in sensor #1 data set !")
 
-        #   Verification of the point 4 only for each sensor
+        #   Verification of the point 5 only for each sensor
         if len(sensors_data) > 1:
             last_length = len(sensors_data[0])
 
@@ -100,7 +111,8 @@ class DataSet:
         self.__sensor_set_min = min([i.data_min for i in self.__sensor_set])
         self.__sensor_set_max = max([i.data_max for i in self.__sensor_set])
 
-        self.__normalized_values = (abs(self.__sensor_set_min), abs(self.__sensor_set_max) + abs(self.__sensor_set_min))
+        self.__sensor_set_min_norm = 0
+        self.__sensor_set_max_norm = 0
 
         self.__temporal_set = temporal_set
         self.__is_normalized = False
@@ -120,17 +132,19 @@ class DataSet:
     def normalize_sensors(self) -> bool:
         operation_success = True
 
+        normalized_values = (abs(self.__sensor_set_min), abs(self.__sensor_set_max) + abs(self.__sensor_set_min))
+
         #   Browse our entire sensor set
         for sensor in self.__sensor_set:
-            operation_success = sensor.normalize_data(self.__normalized_values[0], self.__normalized_values[1])
+            operation_success = sensor.normalize_data(*normalized_values)
 
             #   Exit the loop if a sensor normalisation fails
             if not operation_success:
                 break
 
         if operation_success:
-            self.__sensor_set_min = min([i.data_min for i in self.__sensor_set])
-            self.__sensor_set_max = max([i.data_max for i in self.__sensor_set])
+            self.__sensor_set_min_norm = min([sensor.data_min_norm for sensor in self.__sensor_set])
+            self.__sensor_set_max_norm = max([sensor.data_max_norm for sensor in self.__sensor_set])
 
         #   Update normalisation status of the data set
         self.__is_normalized = operation_success
@@ -148,7 +162,7 @@ class DataSet:
 
             for sensor in self.__sensor_set:
 
-                sensor_data = sensor.get_data_point(i)
+                sensor_data = sensor.get_data_point_normalized(i)
                 sensors_data_sum += sensor_data
 
                 x += sensor_data * sensor.get_center_position().x
@@ -169,17 +183,20 @@ class DataSet:
     def get_sensor_set(self) -> [ForceSensor]:
         return self.__sensor_set
 
+    def get_number_of_sensors(self) -> int:
+        return len(self.__sensor_set)
+
     def get_sensor_set_max_norm(self) -> float:
-        return self.__sensor_set_max
+        return self.__sensor_set_max_norm
 
     def get_sensor_set_min_norm(self) -> float:
-        return self.__sensor_set_min
+        return self.__sensor_set_min_norm
 
     def get_sensor_set_max(self) -> float:
-        return self.__sensor_set_max * self.__normalized_values[1] - self.__normalized_values[0]
+        return self.__sensor_set_max
 
     def get_sensor_set_min(self) -> float:
-        return self.__sensor_set_min * self.__normalized_values[1] - self.__normalized_values[0]
+        return self.__sensor_set_min
 
     def get_temporal_set(self) -> [float]:
         return self.__temporal_set
@@ -211,17 +228,17 @@ class DataSet:
     def get_sensors_min(self) -> [float]:
         return [sensor.get_min() for sensor in self.__sensor_set]
 
+    def get_sensors_max_normalized(self) -> [float]:
+        return [sensor.get_max_normalized() for sensor in self.__sensor_set]
+
+    def get_sensors_min_normalized(self) -> [float]:
+        return [sensor.get_min_normalized() for sensor in self.__sensor_set]
+
     def get_sensors_values_at(self, index: int) -> [float]:
         return [sensor.get_data_point(index) for sensor in self.__sensor_set]
 
-    def denormalize(self, value: float) -> float:
-        return value * self.__normalized_values[1] - self.__normalized_values[0]
-
-    def get_sensors_max_denormalized(self) -> [float]:
-        return [self.denormalize(sensor.get_max()) for sensor in self.__sensor_set]
-
-    def get_sensors_min_denormalized(self) -> [float]:
-        return [self.denormalize(sensor.get_min()) for sensor in self.__sensor_set]
+    def get_sensors_normalized_values_at(self, index: int) -> [float]:
+        return [sensor.get_data_point_normalized(index) for sensor in self.__sensor_set]
 
     #   Will return an array filled with all sensors characteristics [width, height, angle]
     def get_sensors_characteristics(self) -> [[int, int, int]]:

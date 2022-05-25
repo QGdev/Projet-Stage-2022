@@ -6,19 +6,23 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
-from tkinter import Frame, Menu, Toplevel, Label, Button, Radiobutton, StringVar, BooleanVar, Widget
+from tkinter import Frame, Toplevel, Label, Button, Radiobutton, StringVar, BooleanVar, Widget
 from tkinter import filedialog as fd
 
-from views.control_panel_ui import ControlPanelUI
-from views.sensors_map_ui import SensorsMapUI
+from views.control_panel_view import ControlPanel
+
+#   In order to avoid Circular Import problems
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from controller import Controller
 
 
-class MainUI(Frame):
+class MainView(Frame):
     __controller: 'Controller'
     __top_section: Frame
     __top_left_widget: Widget
     __top_right_widget: Widget
-    __control_panel_ui: ControlPanelUI
+    __control_panel_ui: ControlPanel
 
     def __init__(self, parent, controller: 'Controller'):
         super().__init__(parent)
@@ -50,7 +54,7 @@ class MainUI(Frame):
         self.__top_right_widget = widget
         self.__top_right_widget.grid(row=0, column=1, sticky='nwse')
 
-    def attach_control_panel(self, control_panel: ControlPanelUI) -> None:
+    def attach_control_panel(self, control_panel: ControlPanel) -> None:
         self.__control_panel_ui = control_panel
         self.__control_panel_ui.pack(side='bottom', fill='x')
 

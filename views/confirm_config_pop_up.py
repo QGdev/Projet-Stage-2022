@@ -7,7 +7,6 @@
 ------------------------------------------------------------------------------------------------------------------------
 """
 from tkinter import Frame, Toplevel, Label, Button, StringVar
-from tkinter.constants import DISABLED
 
 from dataset import DataSet
 
@@ -31,10 +30,10 @@ class ConfirmConfigPopUp(Toplevel):
 
         sensors_positions = dataset.get_positions()
         sensors_names = dataset.get_sensor_names()
-        sensors_max_norm = dataset.get_sensors_max()
-        sensors_min_norm = dataset.get_sensors_min()
-        sensors_max = dataset.get_sensors_max_denormalized()
-        sensors_min = dataset.get_sensors_min_denormalized()
+        sensors_max_norm = dataset.get_sensors_max_normalized()
+        sensors_min_norm = dataset.get_sensors_min_normalized()
+        sensors_max = dataset.get_sensors_max()
+        sensors_min = dataset.get_sensors_min()
         sensors_number = len(sensors_names)
 
         head_message = Label(self, text="The analysis of the file revealed {:d} sensors".format(sensors_number))
@@ -155,6 +154,7 @@ class ConfirmConfigPopUp(Toplevel):
                                                                   pady=20,
                                                                   sticky='nswe')
         """
+
         #   Just launch the visualisation
         Button(self,
                text="Next",

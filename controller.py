@@ -15,21 +15,20 @@ from tkinter import filedialog as fd
 from dataset import DataSet
 from import_module import DataImportModule
 from model import Model, PlaySpeed
-from position import Position
-from views.confirm_config_pop_up import ConfirmConfigPopUp
-from views.control_panel_ui import ControlPanelUI
-from views.main_ui import MainUI
-from views.sensors_graph_ui import SensorsGraphUI
-from views.sensors_map_ui import SensorsMapUI
 from utils import multiple_svg_path_to_grp_pts, get_color_gradient_array, get_color_hex_array, \
     get_formatted_timestamp_from_value, extract_positive_numerical_value
+from views.confirm_config_pop_up import ConfirmConfigPopUp
+from views.control_panel_view import ControlPanel
+from views.main_view import MainView
+from views.sensors_graph_view import SensorsGraphView
+from views.sensors_map_view import SensorsMapView
 
 
 class Controller:
     __window: tk
-    __main_ui: 'MainUI'
-    __sensors_map: SensorsMapUI
-    __control_panel: ControlPanelUI
+    __main_view: MainView
+    __sensors_map: SensorsMapView
+    __control_panel: ControlPanel
 
     __model: Model | None
     __thread: threading.Thread
@@ -74,24 +73,24 @@ class Controller:
 
     #   UI Element initialization
     def __init_ui__(self) -> None:
-        self.__main_ui = MainUI(self.__window, self)
-        self.__sensors_map = SensorsMapUI(self.__main_ui.get_top_section(), self)
-        self.__control_panel = ControlPanelUI(self.__main_ui, self,
-                                              self.__on_change_play_state,
-                                              self.__on_change_play_time,
-                                              self.__on_change_play_direction,
-                                              self.__on_change_play_speed,
-                                              self.__on_change_play_mode,
-                                              self.__on_change_custom_time_coef)
+        self.__main_view = MainView(self.__window, self)
+        self.__sensors_map = SensorsMapView(self.__main_view.get_top_section(), self)
+        self.__control_panel = ControlPanel(self.__main_view, self,
+                                            self.__on_change_play_state,
+                                            self.__on_change_play_time,
+                                            self.__on_change_play_direction,
+                                            self.__on_change_play_speed,
+                                            self.__on_change_play_mode,
+                                            self.__on_change_custom_time_coef)
 
-        test = SensorsGraphUI(self.__main_ui.get_top_section(), self)
+        test = SensorsGraphView(self.__main_view.get_top_section(), self)
 
-        self.__main_ui.attach_top_right_widget(self.__sensors_map)
-        self.__main_ui.attach_top_left_widget(test)
-        self.__main_ui.attach_control_panel(self.__control_panel)
+        self.__main_view.attach_top_right_widget(self.__sensors_map)
+        self.__main_view.attach_top_left_widget(test)
+        self.__main_view.attach_control_panel(self.__control_panel)
 
-        test.plot()
-        self.__main_ui.pack_top_section()
+        #   test.plot()
+        self.__main_view.pack_top_section()
 
     #   Initialization of the menubar aka toolbar
     def __toolbar_init__(self) -> None:
@@ -115,6 +114,28 @@ class Controller:
 
         #   Attach the file menu to the menubar
         menubar.add_cascade(label="File", menu=file_menu)
+
+    """
+
+
+                CONTROLLER LAUNCH FUNCTION
+
+    """
+    def launch(self) -> None:
+        self.__window.mainloop()
+
+    """
+
+
+                    SHORTCUTS FUNCTIONS
+
+    """
+
+    def get_dataset(self) -> DataSet:
+        return self.__model.get_dataset()
+
+    def get_model(self) -> Model:
+        return self.__model
 
     """
 
@@ -145,10 +166,10 @@ class Controller:
         if import_type == DataImportModule.ImportTypes.Full_File:
             self.__model = import_module.get_model_ff(filename,
                                                       #  On delimiter error, ask user to enter the delimiter
-                                                      lambda: self.__main_ui.ask_for_csv_settings([("Comma", ','),
-                                                                                                   ("Semi-colon", ';'),
-                                                                                                   ("Colon", '.'),
-                                                                                                   ("Tabulation",
+                                                      lambda: self.__main_view.ask_for_csv_settings([("Comma", ','),
+                                                                                                     ("Semi-colon", ';'),
+                                                                                                     ("Colon", '.'),
+                                                                                                     ("Tabulation",
                                                                                                     '\t')]),
                                                       #  On errors that cannot be handled
                                                       lambda x: messagebox.showerror("CSV ERROR",
@@ -180,7 +201,7 @@ class Controller:
             importation_result = import_module.get_model_dsf(filename,
                                                              filename_svg,
                                                              #  On delimiter error, ask user to enter the delimiter
-                                                             lambda: self.__main_ui.ask_for_csv_settings(
+                                                             lambda: self.__main_view.ask_for_csv_settings(
                                                                  [("Comma", ','),
                                                                   ("Semi-colon", ';'),
                                                                   ("Colon", '.'),
@@ -208,13 +229,30 @@ class Controller:
             self.__bg_pts_grps = multiple_svg_path_to_grp_pts(svg_path_data)
 
         #   Ask for a confirmation of the deparsed data
-        ConfirmConfigPopUp(self.__main_ui,
+        ConfirmConfigPopUp(self.__main_view,
                            #    On confirm, will initialize sensors_map_ui and need to know
                            #    if the y-axis need to be inverted
                            lambda: self.__on_config_confirmed(import_type == DataImportModule.ImportTypes.Full_File),
                            #    If the user simply close or exit the window
                            self.__on_loading_cancel,
                            self.__on_manual_config).show(self.__model.get_dataset())
+
+
+
+    def on_resize(self, _: tk.Event) -> None:
+        self.__thread_ask_wait_flag = True
+        if self.__data_loaded:
+            self.__sensors_map.on_resize()
+
+            if self.__bg_pts_grps is not None:
+                self.__sensors_map.draw_bg(self.__bg_pts_grps)
+
+            current_step = self.__model.get_current_step_number()
+            self.__draw_sensors(len(self.get_dataset().get_sensor_names()),
+                                self.__sensor_color_cache[current_step])
+            self.__sensors_map.draw_center_of_mass(current_step)
+
+        self.__thread_ask_wait_flag = True
 
     #   Will be executed everytime the user ask to reset or everytime data is loaded
     def on_reset(self) -> None:
@@ -238,15 +276,21 @@ class Controller:
         self.__window.quit()
 
     def __draw_sensors(self, sensors_number: int, sensors_color: [str]) -> None:
+        sensors_names = self.get_dataset().get_sensor_names()
         for i in range(sensors_number):
-            self.__sensors_map.draw_sensor(i, sensors_color[i])
+            self.__sensors_map.draw_sensor(i, sensors_color[i], sensors_names[i])
+
+    def __update_sensors(self, step_number: int) -> None:
+        sensors_names = self.get_dataset().get_sensor_names()
+        sensors_colors = self.__sensor_color_cache[step_number]
+
+        for i in range(self.get_dataset().get_number_of_sensors()):
+            self.__sensors_map.update_sensor(sensors_colors[i], sensors_names[i])
 
     def __executable_thread(self) -> None:
         self.__thread_ask_stop_flag = False
 
-        sensors_positions: [Position] = self.__model.get_positions()
-        sensors_number: int = len(sensors_positions)
-        sensors_data: [float]
+        sensors_number: int = self.get_dataset().get_number_of_sensors()
 
         #   Check for stop signal
         while not self.__thread_ask_stop_flag:
@@ -257,14 +301,19 @@ class Controller:
                 start_time = time.time()
 
                 current_step = self.__model.get_current_step_number()
-                self.__draw_sensors(sensors_number, self.__sensor_color_cache[current_step])
-                self.__sensors_map.draw_center_of_mass(current_step, "black")
+
+                self.__update_sensors(current_step)
+                self.__sensors_map.draw_center_of_mass(current_step)
 
                 self.__control_panel.update_actual_time_label(self.__timestamp_cache[current_step])
                 self.__control_panel.update_actual_time_scale(current_step)
 
+                #   Put visualisation in pause if a play bound as been reached
                 if self.__model.bound_reach():
                     self.__on_change_play_state()
+
+                #   We will check if the drawing time to compare it to the wait time
+                #   If the drawing time is greater than the wait time, we skip the wait otherwise we wait
                 else:
                     sleep_time = self.__model.get_time_next() - (time.time() - start_time)
                     if sleep_time > 0:
@@ -280,6 +329,8 @@ class Controller:
         self.__thread.start()
         self.__model.play()
 
+        self.__draw_sensors(self.get_dataset().get_number_of_sensors(),
+                            self.__sensor_color_cache[self.__model.get_current_step_number()])
     """
     
         
@@ -291,8 +342,9 @@ class Controller:
     def __update_colors_cache(self):
         self.__sensor_color_cache = list()
 
-        for index in range(0, self.__model.get_steps_number()):
-            tmp = self.__model.get_dataset().get_sensors_values_at(index)
+        for index in range(self.__model.get_steps_number()):
+
+            tmp = self.__model.get_dataset().get_sensors_normalized_values_at(index)
             tmp = get_color_gradient_array(tmp)
             self.__sensor_color_cache.append(get_color_hex_array(tmp))
 
@@ -347,30 +399,6 @@ class Controller:
         print("NOT IMPLEMENTED !")
         #   TODO: implement on manual config
 
-    def on_resize(self, _: tk.Event) -> None:
-        self.__thread_ask_wait_flag = True
-        if self.__data_loaded:
-            self.__sensors_map.on_resize()
-
-            if self.__bg_pts_grps is not None:
-                self.__sensors_map.draw_bg(self.__bg_pts_grps)
-
-            current_step = self.__model.get_current_step_number()
-            self.__draw_sensors(len(self.get_dataset().get_sensor_names()),
-                                self.__sensor_color_cache[current_step])
-            self.__sensors_map.draw_center_of_mass(current_step, "black")
-
-        self.__thread_ask_wait_flag = True
-
-    def launch(self) -> None:
-        self.__window.mainloop()
-
-    def get_dataset(self) -> DataSet:
-        return self.__model.get_dataset()
-
-    def get_model(self) -> Model:
-        return self.__model
-
     def __on_change_play_state(self) -> None:
         if self.__model.is_paused():
             self.__model.play()
@@ -416,13 +444,11 @@ class Controller:
 
         current_step_number = self.__model.get_current_step_number()
 
-        self.__draw_sensors(len(self.__model.get_dataset().get_sensor_names()),
-                            self.__sensor_color_cache[current_step_number])
-        self.__sensors_map.draw_center_of_mass(current_step_number, "black")
+        self.__update_sensors(current_step_number)
+        self.__sensors_map.draw_center_of_mass(current_step_number)
 
         self.__control_panel.update_actual_time_scale(current_step_number)
         self.__control_panel.update_actual_time_label(self.__timestamp_cache[current_step_number])
-
 
     def __on_change_play_direction(self, direction: str) -> None:
         if direction == "reverse":

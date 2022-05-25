@@ -10,8 +10,13 @@ from tkinter import Frame, Label, Button, Scale, IntVar, LabelFrame, OptionMenu,
 from model import PlaySpeed
 from utils import update_slider_max, unlock, lock
 
+#   In order to avoid Circular Import problems
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from controller import Controller
 
-class ControlPanelUI(Frame):
+
+class ControlPanel(Frame):
     __controller: 'Controller'
 
     __on_change_play_state: 'function'
@@ -94,7 +99,7 @@ class ControlPanelUI(Frame):
         self.__play_time_scale = Scale(time_slider_frame, orient='horizontal', length=600, sliderlength=15,
                                        from_=0, to=1000, resolution=1, width=15, showvalue=False,
                                        bg="light grey",
-                                       command=lambda: self.__on_change_play_time("jump",
+                                       command=lambda _: self.__on_change_play_time("jump",
                                                                                   self.__actual_time_var.get()),
                                        variable=self.__actual_time_var)
 
