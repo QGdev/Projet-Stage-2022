@@ -8,8 +8,9 @@
 """
 import math
 import re as regexp
-from tkinter import Scale, Button, OptionMenu, Entry
+from tkinter import Scale, Button, OptionMenu, Entry, Menu
 from tkinter.constants import DISABLED, NORMAL
+from tkinter.ttk import Widget
 
 from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, Move, Close
 
@@ -192,11 +193,11 @@ def update_slider_max(element: Scale, new_value: int | float) -> None:
     element.configure(to=new_value)
 
 
-def lock(element: Button | Scale | OptionMenu | Entry) -> None:
+def lock(element: Button | Scale | OptionMenu | Entry | Menu | Widget) -> None:
     element['state'] = DISABLED
 
 
-def unlock(element: Button | Scale | OptionMenu | Entry) -> None:
+def unlock(element: Button | Scale | OptionMenu | Entry | Menu | Widget) -> None:
     element['state'] = NORMAL
 
 

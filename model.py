@@ -34,6 +34,7 @@ class Model:
     __is_paused: bool
     __is_rt_enabled: bool
     __play_speed: float
+    __play_speed_custom: float
 
     def __init__(self, dataset: DataSet, controller: 'Controller'):
         self.__dataset = dataset
@@ -44,6 +45,7 @@ class Model:
         self.__is_paused = True
         self.__is_rt_enabled = True
         self.__play_speed = 1
+        self.__play_speed_custom = 1
 
     #   Get the full dataset (the object)
     def get_dataset(self) -> DataSet:
@@ -172,15 +174,16 @@ class Model:
     def is_normal_play(self) -> bool:
         return not self.__is_reverse_enabled
 
-    def get_play_speed(self) -> str:
-        index = list(PlaySpeed).index(self.__play_speed)
-        return list(PlaySpeed)[index].value[1]
-
     def get_play_speed_factor(self) -> float:
-        return self.__play_speed
+        if self.__is_rt_enabled:
+            return self.__play_speed
+        return self.__play_speed_custom
 
     def set_play_speed(self, new_speed: float):
-        self.__play_speed = new_speed
+        if self.__is_rt_enabled:
+            self.__play_speed = new_speed
+        else:
+            self.__play_speed_custom = new_speed
 
     def enable_realtime(self):
         self.__is_rt_enabled = True
@@ -193,4 +196,4 @@ class Model:
             if new_value <= 0:
                 raise Exception("Frame time value must be positive and non null !")
 
-            self.__play_speed = new_value
+            self.__play_speed_custom = new_value

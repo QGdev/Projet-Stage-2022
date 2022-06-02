@@ -16,7 +16,7 @@ from dataset import DataSet
 from import_module import DataImportModule
 from model import Model, PlaySpeed
 from utils import multiple_svg_path_to_grp_pts, get_color_gradient_array, get_color_hex_array, \
-    get_formatted_timestamp_from_value, extract_positive_numerical_value
+    get_formatted_timestamp_from_value, extract_positive_numerical_value, lock
 from views.confirm_config_pop_up import ConfirmConfigPopUp
 from views.control_panel_view import ControlPanel
 from views.main_view import MainView
@@ -28,6 +28,7 @@ class Controller:
     __window: tk
     __main_view: MainView
     __sensors_map: SensorsMapView
+    __sensors_graph: SensorsGraphView
     __control_panel: ControlPanel
 
     __model: Model | None
@@ -75,6 +76,7 @@ class Controller:
     def __init_ui__(self) -> None:
         self.__main_view = MainView(self.__window, self)
         self.__sensors_map = SensorsMapView(self.__main_view.get_top_section(), self)
+        self.__sensors_graph = SensorsGraphView(self.__main_view.get_top_section(), self)
         self.__control_panel = ControlPanel(self.__main_view, self,
                                             self.__on_change_play_state,
                                             self.__on_change_play_time,
@@ -83,37 +85,36 @@ class Controller:
                                             self.__on_change_play_mode,
                                             self.__on_change_custom_time_coef)
 
-        test = SensorsGraphView(self.__main_view.get_top_section(), self)
-
         self.__main_view.attach_top_right_widget(self.__sensors_map)
-        self.__main_view.attach_top_left_widget(test)
+        self.__main_view.attach_top_left_widget(self.__sensors_graph)
         self.__main_view.attach_control_panel(self.__control_panel)
 
-        #   test.plot()
         self.__main_view.pack_top_section()
 
     #   Initialization of the menubar aka toolbar
     def __toolbar_init__(self) -> None:
-        #   Declare menubar
-        menubar = Menu(self.__window)
-        self.__window.config(menu=menubar)
-
         #   Declare file menu
-        file_menu = Menu(menubar, tearoff=0)
+        file_menu = Menu(tearoff=False)
 
         #   Declare import menu
-        import_menu = Menu(file_menu, tearoff=0)
+        import_menu = Menu(file_menu, tearoff=False)
         import_menu.add_command(label="Full data file",
                                 command=lambda: self.on_import(DataImportModule.ImportTypes.Full_File))
         import_menu.add_command(label="Data file + SVG file",
                                 command=lambda: self.on_import(DataImportModule.ImportTypes.Data_SVG_Files))
-
         file_menu.add_cascade(label="Import data", menu=import_menu)
         file_menu.add_command(label="Reset", command=self.on_reset)
         file_menu.add_command(label="Exit", command=self.on_exit)
 
+        #   Declare generation menu
+        generation_menu = Menu(file_menu, tearoff=False)
+        generation_menu.add_command(label="Full data file",
+                                    command=lambda: self.on_import(DataImportModule.ImportTypes.Full_File))
+
         #   Attach the file menu to the menubar
-        menubar.add_cascade(label="File", menu=file_menu)
+        self.__main_view.set_import_menu("File", file_menu)
+        self.__main_view.set_generation_menu("Generate", generation_menu)
+        #lock(self.__main_view.get_generation_menu())
 
     """
 
@@ -257,10 +258,12 @@ class Controller:
     #   Will be executed everytime the user ask to reset or everytime data is loaded
     def on_reset(self) -> None:
         if self.__data_loaded:
+            self.__data_loaded = False
             if self.__thread is not None:
                 self.__thread_ask_stop_flag = True
                 print("Thread killed...")
                 self.__thread.join()
+
             self.__control_panel.lock_interface()
 
             self.__control_panel.update_actual_time_label("00:00.000")
@@ -270,11 +273,11 @@ class Controller:
 
             self.__model = None
             self.__sensors_map.delete('all')
+            self.__sensors_graph.clear()
 
     def on_exit(self) -> None:
         self.on_reset()
         self.__window.quit()
-
     def __draw_sensors(self, sensors_number: int, sensors_color: [str]) -> None:
         sensors_names = self.get_dataset().get_sensor_names()
         for i in range(sensors_number):
@@ -370,6 +373,10 @@ class Controller:
         if self.__bg_pts_grps is not None:
             self.__sensors_map.draw_bg(self.__bg_pts_grps)
 
+        self.__sensors_graph.plot(self.get_dataset().get_sensors_values(),
+                                  self.get_dataset().get_sensor_names(),
+                                  self.get_dataset().get_temporal_set())
+
         self.__update_colors_cache()
         self.__update_timestamps_cache()
 
@@ -447,7 +454,6 @@ class Controller:
         self.__update_sensors(current_step_number)
         self.__sensors_map.draw_center_of_mass(current_step_number)
 
-        self.__control_panel.update_actual_time_scale(current_step_number)
         self.__control_panel.update_actual_time_label(self.__timestamp_cache[current_step_number])
 
     def __on_change_play_direction(self, direction: str) -> None:
@@ -462,7 +468,6 @@ class Controller:
 
     def __on_change_play_speed(self, index: int) -> None:
         self.__model.set_play_speed(list(PlaySpeed)[index].value[0])
-        self.__control_panel.set_custom_time_coef_entry_content(str(self.__model.get_play_speed_factor()))
 
     def __on_change_play_mode(self, operation: str) -> None:
         if operation == "real-time":
@@ -481,7 +486,7 @@ class Controller:
             messagebox.showerror("Wrong value entered",
                                  "The value can be a decimal point value but must be positive and non null")
             self.__control_panel.change_frame_time_entry_to_red()
-            time.sleep(0.75)
+            time.sleep(1)
             self.__control_panel.reset_custom_time_coef_entry_color()
             self.__control_panel.set_custom_time_coef_entry_content(str(self.__model.get_play_speed_factor()))
 

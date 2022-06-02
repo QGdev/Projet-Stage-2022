@@ -6,8 +6,9 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
-from tkinter import Frame, Toplevel, Label, Button, Radiobutton, StringVar, BooleanVar, Widget
+from tkinter import Frame, Toplevel, Label, Button, Radiobutton, StringVar, BooleanVar, Widget, Menu
 from tkinter import filedialog as fd
+from tkinter.constants import DISABLED
 
 from views.control_panel_view import ControlPanel
 
@@ -22,6 +23,10 @@ class MainView(Frame):
     __top_section: Frame
     __top_left_widget: Widget
     __top_right_widget: Widget
+
+    __menu_toolbox: Menu
+    __file_menu_toolbox: Menu
+    __generation_menu_toolbox: Menu
     __control_panel_ui: ControlPanel
 
     def __init__(self, parent, controller: 'Controller'):
@@ -31,6 +36,13 @@ class MainView(Frame):
         self.master.columnconfigure(0, weight=1)
         self.master.rowconfigure(0, weight=1)
         self.grid(row=0, column=0, sticky='nwse')
+
+        #   Declare menubar
+        self.__menu_toolbox = Menu(self.master)
+        parent.config(menu=self.__menu_toolbox)
+
+        self.__import_menu_toolbox = None
+        self.__generation_menu_toolbox = None
 
     def ui_init(self):
         self.columnconfigure(0, weight=1)
@@ -61,6 +73,22 @@ class MainView(Frame):
     def pack_top_section(self):
         self.__top_section.pack(side='top', fill='both', expand=True)
 
+    def set_import_menu(self, name: str, menu: Menu):
+        self.__import_menu_toolbox = menu
+        self.__import_menu_toolbox.master = self.__menu_toolbox
+        self.__menu_toolbox.add_cascade(label=name, menu=menu)
+
+    def set_generation_menu(self, name: str, menu: Menu):
+        self.__generation_menu_toolbox = menu
+        self.__generation_menu_toolbox.master = self.__menu_toolbox
+        self.__menu_toolbox.add_cascade(label=name, menu=menu, state=DISABLED)
+        pass
+
+    def get_file_menu(self) -> Menu:
+        return self.__file_menu_toolbox
+
+    def get_generation_menu(self) -> Menu:
+        return self.__generation_menu_toolbox
 
     def ask_for_csv_settings(self, possible_delimiters: [(str, str)]):
         pop_up = Toplevel(self)

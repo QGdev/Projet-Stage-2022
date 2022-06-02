@@ -159,11 +159,11 @@ class ControlPanel(Frame):
         self.__reverse_play_dir_button.grid(row=1, column=3, columnspan=2, sticky='nswe', ipadx=5, padx=5, pady=5)
 
         #   Initialize speed control elements
-        self.__realtime_mode_button.grid(row=0, column=0, columnspan=3, sticky='nswe', ipadx=5, padx=5, pady=5)
-        self.__play_speed_option_menu.grid(row=0, column=3, columnspan=3, sticky='nswe', ipadx=5, padx=5, pady=5)
-        self.__custom_speed_coef_button.grid(row=1, column=0, columnspan=3, sticky='nswe', ipadx=5, padx=5, pady=5)
-        self.__custom_speed_coef_entry.grid(row=1, column=3, columnspan=2, sticky='nswe', ipadx=5, padx=5, pady=5)
-        self.__custom_speed_coef_set_button.grid(row=1, column=5, columnspan=1, sticky='nswe', ipadx=5, padx=5, pady=5)
+        self.__realtime_mode_button.grid(row=0, column=0, columnspan=2, sticky='nswe', ipadx=5, padx=5, pady=5)
+        self.__play_speed_option_menu.grid(row=0, column=2, columnspan=2, sticky='nswe', ipadx=5, padx=5, pady=5)
+        self.__custom_speed_coef_button.grid(row=1, column=0, columnspan=2, sticky='nswe', ipadx=5, padx=5, pady=5)
+        self.__custom_speed_coef_entry.grid(row=1, column=2, columnspan=1, sticky='nswe', ipadx=5, padx=5, pady=5)
+        self.__custom_speed_coef_set_button.grid(row=1, column=3, columnspan=1, sticky='nswe', ipadx=5, padx=5, pady=5)
 
         time_slider_frame.grid(row=0, column=0, columnspan=10, sticky='nwe')
         time_control_frame.grid(row=1, column=0, columnspan=3, sticky='nw')
