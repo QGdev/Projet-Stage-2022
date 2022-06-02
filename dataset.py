@@ -2,6 +2,8 @@
 ------------------------------------------------------------------------------------------------------------------------
     Defining a dataset which will contain all sensors and global variables related to our dataset
 
+    MIT Licence
+
     STAGE 2021 - 2022
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
@@ -11,6 +13,14 @@
 from force_sensor import ForceSensor
 from position import Position
 from utils import get_sensor_center_position
+
+"""
+
+    DataSet
+
+    In charge of everything related to data storage such has temporal values, ForceSensors and map settings
+
+"""
 
 
 class DataSet:
@@ -129,6 +139,7 @@ class DataSet:
         if not self.center_of_mass_position_calculation():
             raise Exception("Cannot calculate position of the center of mass")
 
+    #   Will normalize each sensors and return the success (True) or the failure (False) of the operation
     def normalize_sensors(self) -> bool:
         operation_success = True
 
@@ -150,6 +161,7 @@ class DataSet:
         self.__is_normalized = operation_success
         return operation_success
 
+    #   Will calculate center of mass positions regarding sensors positions and data
     def center_of_mass_position_calculation(self) -> bool:
 
         generated_center_of_mass_positions: [Position] = list()
@@ -180,69 +192,91 @@ class DataSet:
         self.__center_of_mass_positions = generated_center_of_mass_positions
         return True
 
+    #   Get the sensor set
     def get_sensor_set(self) -> [ForceSensor]:
         return self.__sensor_set
 
+    #   Get the number of the sensors in this dataset
     def get_number_of_sensors(self) -> int:
         return len(self.__sensor_set)
 
+    #   Get the global maximum normalized
     def get_sensor_set_max_norm(self) -> float:
         return self.__sensor_set_max_norm
 
+    #   Get the global minimum normalized
     def get_sensor_set_min_norm(self) -> float:
         return self.__sensor_set_min_norm
 
+    #   Get the global maximum non-normalized
     def get_sensor_set_max(self) -> float:
         return self.__sensor_set_max
 
+    #   Get the global minimum non-normalized
     def get_sensor_set_min(self) -> float:
         return self.__sensor_set_min
 
+    #   Get the temporal set
     def get_temporal_set(self) -> [float]:
         return self.__temporal_set
 
+    #   In order to check if the sensors have been normalized
     def is_normalized(self) -> bool:
         return self.__is_normalized
 
+    #   In order to check if center of mass positions have been normalized
     def is_ctr_of_mass_pos_calculated(self) -> bool:
         return self.__center_of_mass_positions_calculated
 
+    #   Get map width (in pixels)
     def get_map_width(self) -> int:
         return self.__map_width
 
+    #   Get map height (in pixels)
     def get_map_height(self) -> int:
         return self.__map_height
 
+    #   Get an array filled with positions of each sensor
     def get_positions(self) -> [Position]:
         return [sensor.get_position() for sensor in self.__sensor_set]
 
+    #   Get an array filled with center positions of each sensor
     def get_centers(self) -> [Position]:
         return [sensor.get_center_position() for sensor in self.__sensor_set]
 
+    #   Get an array filled with the name of each sensor
     def get_sensor_names(self) -> [str]:
         return [sensor.get_name() for sensor in self.__sensor_set]
 
+    #   Get an array filled with the non-normalized maximum of each sensor
     def get_sensors_max(self) -> [float]:
         return [sensor.get_max() for sensor in self.__sensor_set]
 
+    #   Get an array filled with the non-normalized minimum of each sensor
     def get_sensors_min(self) -> [float]:
         return [sensor.get_min() for sensor in self.__sensor_set]
 
+    #   Get an array filled with the normalized maximum of each sensor
     def get_sensors_max_normalized(self) -> [float]:
         return [sensor.get_max_normalized() for sensor in self.__sensor_set]
 
+    #   Get an array filled with the normalized maximum of each sensor
     def get_sensors_min_normalized(self) -> [float]:
         return [sensor.get_min_normalized() for sensor in self.__sensor_set]
 
+    #   Get an array filled with non-normalized values of each sensor
     def get_sensors_values(self) -> [float]:
         return [sensor.get_data() for sensor in self.__sensor_set]
 
+    #   Get an array filled with normalized values of each sensor
     def get_sensors_normalized_values(self) -> [float]:
         return [sensor.get_data_normalized() for sensor in self.__sensor_set]
 
+    #   Get an array filled with non-normalized values of each sensor at a specific point
     def get_sensors_values_at(self, index: int) -> [float]:
         return [sensor.get_data_point(index) for sensor in self.__sensor_set]
 
+    #   Get an array filled with normalized values of each sensor at a specific point
     def get_sensors_normalized_values_at(self, index: int) -> [float]:
         return [sensor.get_data_point_normalized(index) for sensor in self.__sensor_set]
 
@@ -250,5 +284,6 @@ class DataSet:
     def get_sensors_characteristics(self) -> [[int, int, int]]:
         return [sensor.get_characteristics() for sensor in self.__sensor_set]
 
+    #   Get an array of all center of mass positions
     def get_c_o_m_positions(self) -> [Position]:
         return self.__center_of_mass_positions

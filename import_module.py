@@ -6,16 +6,27 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+
+#   Import of basic modules
 import csv
 from xml.dom import minidom
 from enum import Enum
 import svg.path as svg
 
+#   Import of custom modules
 from dataset import DataSet
 from position import Position
 from model import Model
 from utils import get_file, get_sensor_number, get_next_data_column_index, is_a_numerical_value, is_a_int_value, \
     extract_numerical_value
+
+"""
+
+    DataImportModule
+
+    In charge of everything related to de-parsing data from CSV or CSV+SVG (depending on import type).
+
+"""
 
 
 class DataImportModule:
@@ -28,6 +39,11 @@ class DataImportModule:
     def __init__(self):
         pass
 
+    """
+
+            FIRST IMPORTATION TYPE (CSV ONLY)
+
+    """
     #   Full file data (data + positions)
     def get_model_ff(self, file_path: str,
                      on_delimiters_error: 'function',
@@ -138,8 +154,11 @@ class DataImportModule:
             on_error(e)
             raise e
 
-    #
-    #
+    """
+
+            SECOND IMPORTATION TYPE (CSV+SVG)
+
+    """
     #   Data + SVG files import
     def get_model_dsf(self,
                       file_path: str,
@@ -294,6 +313,6 @@ class DataImportModule:
             print("\tException: {0}".format(e))
 
             on_position_error(e)
-            raise e
+            #   raise e
             #   This will indicate an error during the deparsing
             return None

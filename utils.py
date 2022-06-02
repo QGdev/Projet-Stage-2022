@@ -2,21 +2,33 @@
 ------------------------------------------------------------------------------------------------------------------------
     Defining functions and methods used in order to get data from a csv file
 
+    MIT Licence
+
     STAGE 2021 - 2022
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+#   Import of basic modules
 import math
 import re as regexp
 from tkinter import Scale, Button, OptionMenu, Entry, Menu
 from tkinter.constants import DISABLED, NORMAL
 from tkinter.ttk import Widget
 
+#   Import of custom modules
 from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, Move, Close
-
 from position import Position
 
+"""
 
+    Utils
+
+    Used as a huge container for generic functions that is or can be used somewhere else
+
+"""
+
+
+#   In order to get a file
 def get_file(file_path: str, encoding: str = "ISO-8859-1"):
     return open(file_path, newline='', encoding=encoding)
 
@@ -164,6 +176,7 @@ def get_color_gradient_graph(value: float, lower_alpha: int) -> (int, int, int, 
     return int(255 * ((value - 0.5) / 0.5)), int(255 * abs(1 - value) / 0.5), 0, 255
 
 
+#   A translator to pass from an array of normalized values to an array of R,G,B colors codes
 def get_color_gradient_array(values: [float]) -> list[tuple[int, int, int]]:
 
     generated_array = list()
@@ -185,22 +198,26 @@ def get_color_hex_array(values: list[tuple[int, int, int]]) -> [str]:
     return generated_array
 
 
+#   To update sliders actual value
 def update_slider_value(element: Scale, new_value: int | float) -> None:
     element.set(new_value)
 
 
+#   To update sliders max value
 def update_slider_max(element: Scale, new_value: int | float) -> None:
     element.configure(to=new_value)
 
 
+#   To lock a tkinter element
 def lock(element: Button | Scale | OptionMenu | Entry | Menu | Widget) -> None:
     element['state'] = DISABLED
 
-
+#   To unlock a tkinter element
 def unlock(element: Button | Scale | OptionMenu | Entry | Menu | Widget) -> None:
     element['state'] = NORMAL
 
 
+#   An ugly function to pass from a svg path to a group of points
 def svg_path_to_grp_pts(svg_path: Path) -> [[(int, int)]]:
     #   Abort the process if there is no svg path
     if svg_path.__len__() == 0:
@@ -229,6 +246,7 @@ def svg_path_to_grp_pts(svg_path: Path) -> [[(int, int)]]:
     return generated_array_pts
 
 
+#   An ugly function to pass from multiple svg path to a group of points
 def multiple_svg_path_to_grp_pts(svg_path_array: [Path]) -> [[(int, int)]]:
     #   Abort the process if there is no svg path
     if len(svg_path_array) == 0:
@@ -259,6 +277,7 @@ def multiple_svg_path_to_grp_pts(svg_path_array: [Path]) -> [[(int, int)]]:
     return generated_array_pts
 
 
+#   Translate milliseconds timestamp to a hours, minutes, seconds, milliseconds set
 def get_timestamp(value: float) -> (int, int, int, int):
 
     value_int_ = int(value)
@@ -271,6 +290,7 @@ def get_timestamp(value: float) -> (int, int, int, int):
     return millis, seconds, minutes, hours
 
 
+#   Translate hours, minutes, seconds, milliseconds set into something formatted and displayable
 def get_formatted_timestamp(value: (int, int, int, int)) -> str:
     if value[2] == 0:
         return "{:0>2d}.{:0>3d}".format(value[1], value[0])
@@ -280,10 +300,12 @@ def get_formatted_timestamp(value: (int, int, int, int)) -> str:
         return "{:0>2d}:{:0>2d}:{:0>2d}.{:0>3d}".format(value[3], value[2], value[1], value[0])
 
 
+#   Translate milliseconds timestamp into something formatted and displayable
 def get_formatted_timestamp_from_value(value: float) -> str:
     return get_formatted_timestamp(get_timestamp(value))
 
 
+#   Pass from position and sensors characteristics to a center position
 def get_sensor_center_position(position: Position, sensor_characteristics: [int, int, int]) -> [Position]:
 
     #   Calculate each coordinates needed to avoid repetitive calculations
@@ -299,8 +321,10 @@ def get_sensor_center_position(position: Position, sensor_characteristics: [int,
                     int(x_ * sin_alpha + y_ * cos_alpha))
 
 
+#   A is in [b1; b2] ?
 def a_in_bounds(a: int|float, b1: int|float, b2: int|float) -> bool:
     return b1 <= a <= b2
 
+#   A is in [c1; c2] or B is in [c1; c2] ?
 def a_or_b_in_bounds(a: int|float, b: int|float, c1: int|float, c2: int|float) -> bool:
     return a_in_bounds(a, c1, c2) or a_in_bounds(b, c1, c2)

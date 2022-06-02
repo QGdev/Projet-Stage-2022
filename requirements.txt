@@ -1,6 +1,7 @@
-numpy~=1.22.3
+numpy==1.22.4
 scipy~=1.8.1
 matplotlib==3.5.2
 setuptools==62.3.2
 svg.path~=6.0
 opencv-python~=4.5.5.64
+pypng==0.0.21

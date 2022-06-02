@@ -2,6 +2,8 @@
 ------------------------------------------------------------------------------------------------------------------------
     Defining force sensor class
 
+    MIT Licence
+
     STAGE 2021 - 2022
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
@@ -24,6 +26,14 @@ class ForceSensor:
     height: int
     angle: int
 
+
+    """
+
+        ForceSensor
+
+        In charge of everything related to a force sensor and contains everything about it.
+
+    """
     def __init__(self, name: str,
                  position: Position, center_pos: Position,
                  width: int, height: int, angle: int,
@@ -83,6 +93,7 @@ class ForceSensor:
     def get_angle(self) -> int:
         return self.angle
 
+    #   Will normalize data by filling normalised data array
     def normalize_data(self, add_value: float, division_value: float) -> bool:
         #   Reset normalized data array
         self.data_normalized = list()

@@ -2,6 +2,8 @@
 ------------------------------------------------------------------------------------------------------------------------
     Defining sensor map frame
 
+    MIT Licence
+
     STAGE 2021 - 2022
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
@@ -16,6 +18,14 @@ from position import Position
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from controller import Controller
+
+"""
+
+    SensorsMapView
+
+    In charge of displaying classic visualisation with auto scaling
+
+"""
 
 
 class SensorsMapView(Canvas):
@@ -39,8 +49,8 @@ class SensorsMapView(Canvas):
     def __init__(self, parent, controller: 'Controller'):
         super().__init__(parent, borderwidth=2, bg="white")
         self.__controller = controller
-        self.__com_font = Font(family='arial', size=30, weight='bold')
         self.__com_font = Font(family='arial', size=20, weight='bold')
+        self.__sensor_name_font = Font(family='arial', size=10, weight='bold')
         self.__scale_factor = 1
         self.__map_width = 0
         self.__map_height = 0
@@ -104,6 +114,14 @@ class SensorsMapView(Canvas):
 
     def draw_sensor(self, index: int, color: str, id: str) -> None:
         self.create_polygon(self.__cache_sensors_positions[index], fill=color, tags=id)
+
+    def draw_sensor_names(self, position: [[int, int]], sensors_name: [str]) -> None:
+        for index in range (len(sensors_name)):
+            self.create_text(position[index].x * self.__scale_factor,
+                             position[index].y * self.__scale_factor,
+                             font=self.__sensor_name_font,
+                             fill='white',
+                             text=sensors_name[index])
 
     def update_sensor(self, color: str, id: str) -> None:
         self.itemconfigure(id, fill=color)

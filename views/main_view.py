@@ -2,20 +2,31 @@
 ------------------------------------------------------------------------------------------------------------------------
     Defining main application frame
 
+    MIT Licence
+
     STAGE 2021 - 2022
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+#   Import of basic modules
 from tkinter import Frame, Toplevel, Label, Button, Radiobutton, StringVar, BooleanVar, Widget, Menu
-from tkinter import filedialog as fd
 from tkinter.constants import DISABLED
 
+#   Import of custom modules
 from views.control_panel_view import ControlPanel
 
 #   In order to avoid Circular Import problems
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from controller import Controller
+
+"""
+
+    MainView
+
+    In charge of holding views inside of the window.
+
+"""
 
 
 class MainView(Frame):
@@ -55,23 +66,35 @@ class MainView(Frame):
         self.__top_section.columnconfigure(1, weight=1)
         self.__top_section.rowconfigure(0, weight=1)
 
+    #   To get top section (generally used to set parent of a top section children)
     def get_top_section(self) -> Frame:
         return self.__top_section
 
+    #   To attach child element to the left top of the mainview
     def attach_top_left_widget(self, widget: Widget) -> None:
         self.__top_left_widget = widget
         self.__top_left_widget.grid(row=0, column=0, sticky='nwse')
 
+    #   To attach child element to the right top of the mainview
     def attach_top_right_widget(self, widget: Widget) -> None:
         self.__top_right_widget = widget
         self.__top_right_widget.grid(row=0, column=1, sticky='nwse')
 
+    #   To attach controlpanel to the mainview
     def attach_control_panel(self, control_panel: ControlPanel) -> None:
         self.__control_panel_ui = control_panel
         self.__control_panel_ui.pack(side='bottom', fill='x')
 
     def pack_top_section(self):
         self.__top_section.pack(side='top', fill='both', expand=True)
+
+    #
+    #
+    #
+    #   Waning: Still unfinished, image generation need to be finished
+    #
+    #
+    #
 
     def set_import_menu(self, name: str, menu: Menu):
         self.__import_menu_toolbox = menu
@@ -82,7 +105,6 @@ class MainView(Frame):
         self.__generation_menu_toolbox = menu
         self.__generation_menu_toolbox.master = self.__menu_toolbox
         self.__menu_toolbox.add_cascade(label=name, menu=menu, state=DISABLED)
-        pass
 
     def get_file_menu(self) -> Menu:
         return self.__file_menu_toolbox
@@ -90,6 +112,7 @@ class MainView(Frame):
     def get_generation_menu(self) -> Menu:
         return self.__generation_menu_toolbox
 
+    #   If the dataimportmodule did not detect delimiters, application will ask for delimiter setting
     def ask_for_csv_settings(self, possible_delimiters: [(str, str)]):
         pop_up = Toplevel(self)
         pop_up.wm_title("CSV settings")
@@ -113,19 +136,6 @@ class MainView(Frame):
         button.wait_variable(button_has_been_pressed)
         pop_up.destroy()
         return selected.get()
-
-    def on_import(self):
-        filename = fd.askopenfilename(
-            title='Open a data file',
-            initialdir='~/',
-            filetypes=(("CSV Files", ".csv"),))
-
-        #   The user didn't select anything or just close the dialog
-        #   So we just abort the function
-        if filename == "" or filename == "()":
-            return
-
-        self.__controller.load_data_full_csv(filename)
 
     def on_exit(self):
         self.__controller.on_exit()

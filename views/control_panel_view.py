@@ -2,11 +2,17 @@
 ------------------------------------------------------------------------------------------------------------------------
     Defining control panel frame
 
-    STAGE 521 - 522
+    MIT Licence
+
+    STAGE 2021 - 2022
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+
+#   Import of basic modules
 from tkinter import Frame, Label, Button, Scale, IntVar, LabelFrame, OptionMenu, StringVar, Entry
+
+#   Import of custom modules
 from model import PlaySpeed
 from utils import update_slider_max, unlock, lock
 
@@ -14,6 +20,14 @@ from utils import update_slider_max, unlock, lock
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from controller import Controller
+
+"""
+
+    ControlPanel
+
+    In charge of visualisation controls such as Play/Pause, beginning/end, previous/next, normal/reverse, etc...
+
+"""
 
 
 class ControlPanel(Frame):
@@ -100,7 +114,7 @@ class ControlPanel(Frame):
                                        from_=0, to=1000, resolution=1, width=15, showvalue=False,
                                        bg="light grey",
                                        command=lambda _: self.__on_change_play_time("jump",
-                                                                                  self.__actual_time_var.get()),
+                                                                                    self.__actual_time_var.get()),
                                        variable=self.__actual_time_var)
 
         #   Play control frame
@@ -180,6 +194,7 @@ class ControlPanel(Frame):
     def set_custom_time_coef_entry_content(self, new_content: str):
         self.__custom_speed_coef_entry_var.set(new_content)
 
+    #   Lock play controls group
     def lock_play_controls(self) -> None:
         lock(self.__play_pause_button)
         lock(self.__go_start_button)
@@ -189,6 +204,7 @@ class ControlPanel(Frame):
         lock(self.__normal_play_dir_button)
         lock(self.__reverse_play_dir_button)
 
+    #   Unlock play controls group
     def unlock_play_controls(self) -> None:
         unlock(self.__play_pause_button)
         unlock(self.__go_start_button)
@@ -198,6 +214,7 @@ class ControlPanel(Frame):
         unlock(self.__normal_play_dir_button)
         unlock(self.__reverse_play_dir_button)
 
+    #   Lock speed controls group
     def lock_speed_controls(self) -> None:
         lock(self.__realtime_mode_button)
         lock(self.__play_speed_option_menu)
@@ -205,6 +222,7 @@ class ControlPanel(Frame):
         lock(self.__custom_speed_coef_entry)
         lock(self.__custom_speed_coef_set_button)
 
+    #   Unlock speed controls group
     def unlock_speed_controls(self) -> None:
         unlock(self.__realtime_mode_button)
         unlock(self.__play_speed_option_menu)
@@ -212,41 +230,25 @@ class ControlPanel(Frame):
         unlock(self.__custom_speed_coef_entry)
         unlock(self.__custom_speed_coef_set_button)
 
-    def lock_slider(self) -> None:
+    #   Lock play time slider
+    def lock_time_slider(self) -> None:
         lock(self.__play_time_scale)
 
-    def unlock_sliders(self) -> None:
+    #   Unlock play time slider
+    def unlock_time_sliders(self) -> None:
         unlock(self.__play_time_scale)
 
-    def lock_reverse_dir_button(self) -> None:
-        lock(self.__reverse_play_dir_button)
-
-    def unlock_reverse_dir_button(self) -> None:
-        unlock(self.__reverse_play_dir_button)
-
-    def lock_normal_dir_button(self) -> None:
-        lock(self.__normal_play_dir_button)
-
-    def unlock_normal_dir_button(self) -> None:
-        unlock(self.__normal_play_dir_button)
-
+    #   Set normal/reverse buttons on normal mode
     def normal_dir_mode(self) -> None:
         lock(self.__normal_play_dir_button)
         unlock(self.__reverse_play_dir_button)
 
+    #   Set normal/reverse buttons on reverse mode
     def reverse_dir_mode(self) -> None:
         unlock(self.__normal_play_dir_button)
         lock(self.__reverse_play_dir_button)
 
-    def lock_realtime_elements(self) -> None:
-        lock(self.__realtime_mode_button)
-        lock(self.__play_speed_option_menu)
-
-    def unlock_custom_time_coef_elements(self) -> None:
-        unlock(self.__custom_speed_coef_button)
-        unlock(self.__custom_speed_coef_entry)
-        unlock(self.__custom_speed_coef_set_button)
-
+    #   Lock/unlock elements in order to put it in realtime mode
     def realtime_mode(self) -> None:
         lock(self.__realtime_mode_button)
         unlock(self.__play_speed_option_menu)
@@ -254,6 +256,7 @@ class ControlPanel(Frame):
         lock(self.__custom_speed_coef_entry)
         lock(self.__custom_speed_coef_set_button)
 
+    #   Lock/unlock elements in order to put it in custom coef mode
     def custom_time_coef_mode(self) -> None:
         unlock(self.__realtime_mode_button)
         lock(self.__play_speed_option_menu)
@@ -261,27 +264,26 @@ class ControlPanel(Frame):
         unlock(self.__custom_speed_coef_entry)
         unlock(self.__custom_speed_coef_set_button)
 
-    def lock_time_slider(self) -> None:
-        lock(self.__play_time_scale)
-
-    def unlock_time_slider(self) -> None:
-        unlock(self.__play_time_scale)
-
+    #   Lock everything on the interface
     def lock_interface(self) -> None:
         self.lock_play_controls()
         self.lock_speed_controls()
-        self.lock_slider()
+        self.lock_time_slider()
 
+    #   Update actual time indicator
     def update_actual_time_label(self, new_value: str) -> None:
         self.__actual_time_label['text'] = new_value
 
+    #   Update actual time slider
     def update_actual_time_scale(self, new_value: int) -> None:
         self.__actual_time_var.set(new_value)
         self.__play_time_scale.update()
 
+    #   Update end time indicator
     def update_end_time_label(self, new_value: str) -> None:
         self.__total_time_label['text'] = new_value
 
+    #   Update end time scale
     def update_end_time_scale(self, new_value: int) -> None:
         self.__total_time_var.set(new_value)
         update_slider_max(self.__play_time_scale, new_value)

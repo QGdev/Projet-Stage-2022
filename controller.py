@@ -2,29 +2,42 @@
 ------------------------------------------------------------------------------------------------------------------------
     Defining application controller
 
+    MIT Licence
+
     STAGE 2021 - 2022
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+#   Import of basic modules
 import threading
 import time
 import tkinter as tk
 from tkinter import Menu, messagebox
 from tkinter import filedialog as fd
 
+#   Import of custom modules
 from dataset import DataSet
 from import_module import DataImportModule
 from model import Model, PlaySpeed
 from utils import multiple_svg_path_to_grp_pts, get_color_gradient_array, get_color_hex_array, \
-    get_formatted_timestamp_from_value, extract_positive_numerical_value, lock
+    get_formatted_timestamp_from_value, extract_positive_numerical_value
 from views.confirm_config_pop_up import ConfirmConfigPopUp
 from views.control_panel_view import ControlPanel
 from views.main_view import MainView
 from views.sensors_graph_view import SensorsGraphView
 from views.sensors_map_view import SensorsMapView
 
+"""
+
+    Controller
+    
+    In charge of everything important in this application from the startup to the visualisation or the end of it.
+
+"""
+
 
 class Controller:
+    #   View elements
     __window: tk
     __main_view: MainView
     __sensors_map: SensorsMapView
@@ -42,7 +55,6 @@ class Controller:
     __data_loaded: bool
 
     """
-
 
             CONTROLLER INITIALIZATION SECTION
 
@@ -66,7 +78,6 @@ class Controller:
         self.__thread_ask_stop_flag = False
 
     """
-
 
             UI INITIALIZATION SECTION
 
@@ -114,12 +125,10 @@ class Controller:
         #   Attach the file menu to the menubar
         self.__main_view.set_import_menu("File", file_menu)
         self.__main_view.set_generation_menu("Generate", generation_menu)
-        #lock(self.__main_view.get_generation_menu())
 
     """
 
-
-                CONTROLLER LAUNCH FUNCTION
+            CONTROLLER LAUNCH FUNCTION
 
     """
     def launch(self) -> None:
@@ -127,8 +136,7 @@ class Controller:
 
     """
 
-
-                    SHORTCUTS FUNCTIONS
+            SHORTCUTS FUNCTIONS
 
     """
 
@@ -140,8 +148,7 @@ class Controller:
 
     """
 
-
-            CONTROLLER CALLBACK FUNCTIONS INITIALIZATION SECTION
+            CONTROLLER CALLBACK FUNCTIONS INITIALIZATION SECTION (FOR MAIN ACTIONS)
 
     """
 
@@ -212,7 +219,7 @@ class Controller:
                                                              lambda x: messagebox.showerror("ERROR",
                                                                                             "An error occurred during the analysis of the given SVG file\n {0}".format(x)),
                                                              #  When no background path has been found
-                                                             lambda : messagebox.showinfo("No background found",
+                                                             lambda: messagebox.showinfo("No background found",
                                                                                           "The analysis of the SVG haven't revealed background path, don't forget to put \"BG_PATH\" in the id of the path to get a background"),
                                                              #  On errors that cannot be handled during CSV analysis
                                                              lambda x: messagebox.showerror("ERROR",
@@ -225,8 +232,6 @@ class Controller:
 
             #   Decompose importation result
             self.__model, svg_path_data = importation_result
-
-            self.__bg_pts_grps = None
             self.__bg_pts_grps = multiple_svg_path_to_grp_pts(svg_path_data)
 
         #   Ask for a confirmation of the deparsed data
@@ -238,13 +243,11 @@ class Controller:
                            self.__on_loading_cancel,
                            self.__on_manual_config).show(self.__model.get_dataset())
 
-
-
+    #   On window resize event
     def on_resize(self, _: tk.Event) -> None:
         self.__thread_ask_wait_flag = True
         if self.__data_loaded:
             self.__sensors_map.on_resize()
-
             if self.__bg_pts_grps is not None:
                 self.__sensors_map.draw_bg(self.__bg_pts_grps)
 
@@ -275,13 +278,24 @@ class Controller:
             self.__sensors_map.delete('all')
             self.__sensors_graph.clear()
 
+    #   When the window is closed
     def on_exit(self) -> None:
         self.on_reset()
         self.__window.quit()
+
+    """
+
+            VIEW DRAWING SECTION
+
+    """
+
     def __draw_sensors(self, sensors_number: int, sensors_color: [str]) -> None:
         sensors_names = self.get_dataset().get_sensor_names()
         for i in range(sensors_number):
             self.__sensors_map.draw_sensor(i, sensors_color[i], sensors_names[i])
+
+        self.__sensors_map.draw_sensor_names(self.get_dataset().get_centers(),
+                                             sensors_names)
 
     def __update_sensors(self, step_number: int) -> None:
         sensors_names = self.get_dataset().get_sensor_names()
@@ -290,10 +304,14 @@ class Controller:
         for i in range(self.get_dataset().get_number_of_sensors()):
             self.__sensors_map.update_sensor(sensors_colors[i], sensors_names[i])
 
+    """
+
+            THREADING SECTION
+
+    """
+
     def __executable_thread(self) -> None:
         self.__thread_ask_stop_flag = False
-
-        sensors_number: int = self.get_dataset().get_number_of_sensors()
 
         #   Check for stop signal
         while not self.__thread_ask_stop_flag:
@@ -336,7 +354,6 @@ class Controller:
                             self.__sensor_color_cache[self.__model.get_current_step_number()])
     """
     
-        
         CACHE GENERATION SECTION
         
     """
@@ -360,6 +377,13 @@ class Controller:
         for value in temporal_set:
             self.__timestamp_cache.append(get_formatted_timestamp_from_value(value))
 
+    """
+
+            CONTROLLER CALLBACK FUNCTIONS INITIALIZATION SECTION (FOR IMPORT IN PROGRESS)
+
+    """
+
+    #   Will prepare everything after the loaded configuration has been confirmed
     def __on_config_confirmed(self, y_axis_inverted: bool) -> None:
 
         self.__sensors_map.update_map_settings(self.get_dataset().get_map_height(),
@@ -382,13 +406,14 @@ class Controller:
 
         self.__control_panel.update_end_time_label(self.__timestamp_cache[self.__model.get_steps_number() - 1])
         self.__control_panel.update_end_time_scale(self.__model.get_steps_number() - 1)
-        self.__control_panel.unlock_sliders()
+        self.__control_panel.unlock_time_sliders()
         self.__control_panel.unlock_play_controls()
         self.__control_panel.normal_dir_mode()
         self.__control_panel.realtime_mode()
 
         self.launch_thread()
 
+    #   When the loaded configuration as been invalidated or canceled
     def __on_loading_cancel(self) -> None:
         #   Model deletion
         if self.__model is not None:
@@ -401,11 +426,19 @@ class Controller:
         #   Reset init flag(s)
         self.__data_loaded = False
 
+    #   This option was basically concepted to let user change settings by hand
+    #   Due to lack of time, this was unimplemented
     def __on_manual_config(self) -> None:
         print("manual data config asked !")
         print("NOT IMPLEMENTED !")
         #   TODO: implement on manual config
 
+    """
+
+            CONTROLLER CALLBACK FUNCTIONS INITIALIZATION SECTION (DURING VISUALISATION)
+
+    """
+    #   To change from play to pause or vice versa
     def __on_change_play_state(self) -> None:
         if self.__model.is_paused():
             self.__model.play()
@@ -421,31 +454,37 @@ class Controller:
             self.__model.pause()
             self.__thread_ask_stop_flag = True
 
+    #   Will handle jump to time or go to start/end or previous/next frame operations during visualisation
     def __on_change_play_time(self, operation: str, new_time: int = -1) -> None:
         self.__thread_ask_wait_flag = True
+
         if operation == "jump":
             if new_time > -1:
                 self.__model.jump_to_step(new_time)
+        else:
+            if operation == "go_start":
+                self.__model.jump_to_step(0)
 
-        elif operation == "go_start":
-            self.__model.jump_to_step(0)
+            elif operation == "go_end":
+                self.__model.jump_to_step(self.__model.get_steps_number() - 1)
 
-        elif operation == "go_end":
-            self.__model.jump_to_step(self.__model.get_steps_number() - 1)
+            #   Next and previous frame operations are only supported when the visualization is stopped
+            elif self.__model.is_paused():
+                if operation == "previous_frame":
+                    self.__model.jump_to_step(self.__model.get_current_step_number() - 1)
 
-        #   Next and previous frame operations are only supported when the visualization is stopped
-        elif self.__model.is_paused():
-            if operation == "previous_frame":
-                self.__model.jump_to_step(self.__model.get_current_step_number() - 1)
-
-            elif operation == "next_frame":
-                self.__model.jump_to_step(self.__model.get_current_step_number() + 1)
+                elif operation == "next_frame":
+                    self.__model.jump_to_step(self.__model.get_current_step_number() + 1)
+                else:
+                    self.__thread_ask_stop_flag = False
+                    raise Exception("on_change_play_time : UNSUPPORTED INSTRUCTION ({:s})".format(operation))
             else:
                 self.__thread_ask_stop_flag = False
                 raise Exception("on_change_play_time : UNSUPPORTED INSTRUCTION ({:s})".format(operation))
-        else:
-            self.__thread_ask_stop_flag = False
-            raise Exception("on_change_play_time : UNSUPPORTED INSTRUCTION ({:s})".format(operation))
+
+            #   Update the time scale for any operation except for the jump operation because
+            #   it will cause a weird recursion error for some reason that is a working fix
+            self.__control_panel.update_actual_time_scale(self.__model.get_current_step_number())
 
         self.__thread_ask_wait_flag = False
 
@@ -453,22 +492,22 @@ class Controller:
 
         self.__update_sensors(current_step_number)
         self.__sensors_map.draw_center_of_mass(current_step_number)
-
         self.__control_panel.update_actual_time_label(self.__timestamp_cache[current_step_number])
 
+    #   To handle change of the play direction normal or reverse
     def __on_change_play_direction(self, direction: str) -> None:
         if direction == "reverse":
             self.__model.reverse()
-            self.__control_panel.unlock_normal_dir_button()
-            self.__control_panel.lock_reverse_dir_button()
+            self.__control_panel.reverse_dir_mode()
         else:
             self.__model.normal()
-            self.__control_panel.unlock_reverse_dir_button()
-            self.__control_panel.lock_normal_dir_button()
+            self.__control_panel.normal_dir_mode()
 
+    #   Change speed coef from menu (for realtime time coef only)
     def __on_change_play_speed(self, index: int) -> None:
         self.__model.set_play_speed(list(PlaySpeed)[index].value[0])
 
+    #   Change from real-time coef to custom coef
     def __on_change_play_mode(self, operation: str) -> None:
         if operation == "real-time":
             self.__model.enable_realtime()
@@ -480,6 +519,7 @@ class Controller:
             raise Exception("__on_change_play_mode : UNSUPPORTED INSTRUCTION ({:s})".format(operation))
         self.__control_panel.update()
 
+    #   Change speed coef from entry (for custom time coef only)
     def __on_change_custom_time_coef(self, new_frame_time: str) -> None:
         value = extract_positive_numerical_value(new_frame_time)
         if value is None or value <= 0:

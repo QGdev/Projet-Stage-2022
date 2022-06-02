@@ -6,10 +6,21 @@
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+#   Import of basic modules
 from enum import Enum
 
+#   Import of custom modules
 from dataset import DataSet
 from position import Position
+
+
+"""
+
+    PlaySpeed
+
+    Just act like an enumeration of all normal speed coef.
+
+"""
 
 
 class PlaySpeed(Enum):
@@ -22,6 +33,15 @@ class PlaySpeed(Enum):
     speed_3 = [0.25, "x3"]
     speed_4 = [0.125, "x4"]
     speed_8 = [0.0625, "x8"]
+
+
+"""
+
+    Model
+
+    Will handle everything about the visualisation behavior like play/pause, time between to frames, etc...
+    
+"""
 
 
 class Model:
@@ -143,18 +163,28 @@ class Model:
         #   Normal
         return self.__next_step()
 
+    #   To enable normal play direction
     def normal(self) -> None:
         self.__is_reverse_enabled = False
 
+    #   To enable reverse play direction
     def reverse(self) -> None:
         self.__is_reverse_enabled = True
 
+    #   Do what the name of the function means
+    #   Will pause the visualisation
     def pause(self) -> None:
         self.__is_paused = True
 
+    #   Will play the visualisation
     def play(self) -> None:
         self.__is_paused = False
 
+    #   Will return play direction
+    #       1   -> Normal direction
+    #       0   -> Paused
+    #       -1  -> Reversed direction
+    #
     def get_play_direction(self) -> int:
         #   Pause
         if self.__is_paused:
@@ -165,32 +195,40 @@ class Model:
         #   Normal
         return 1
 
+    #   Return a bool to know if the visualisation is paused
     def is_paused(self) -> bool:
         return self.__is_paused
 
+    #   Return a bool to know if the visualisation is in reverse play mode
     def is_reverse_play_enabled(self) -> bool:
         return self.__is_reverse_enabled
 
+    #   Return a bool to know if the visualisation is in normal play mode
     def is_normal_play(self) -> bool:
         return not self.__is_reverse_enabled
 
+    #   Will return the time coef
     def get_play_speed_factor(self) -> float:
         if self.__is_rt_enabled:
             return self.__play_speed
         return self.__play_speed_custom
 
+    #   To set the play speed coef
     def set_play_speed(self, new_speed: float):
         if self.__is_rt_enabled:
             self.__play_speed = new_speed
         else:
             self.__play_speed_custom = new_speed
 
+    #   Enable realtime playing (or normal play)
     def enable_realtime(self):
         self.__is_rt_enabled = True
 
+    #   Enable custom playing (or custom play)
     def enable_custom_speed_factor(self):
         self.__is_rt_enabled = False
 
+    #   Will enable to set custom time coef
     def set_speed_factor_value(self, new_value: float):
         if new_value is not None:
             if new_value <= 0:

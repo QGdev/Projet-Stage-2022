@@ -2,13 +2,25 @@
 ------------------------------------------------------------------------------------------------------------------------
     Defining the pop up that will allow the user to confirm or not the configuration
 
+    MIT Licence
+
     STAGE 2021 - 2022
         Quentin GOMES DOS REIS
 ------------------------------------------------------------------------------------------------------------------------
 """
+#   Import of basic modules
 from tkinter import Frame, Toplevel, Label, Button, StringVar
 
+#   Import of custom modules
 from dataset import DataSet
+
+"""
+
+    ConfirmConfigPopUp
+
+    In charge of displaying de-parsed data from DataImportModule to the user to know if there is abnormal values.
+
+"""
 
 
 class ConfirmConfigPopUp(Toplevel):
@@ -26,6 +38,7 @@ class ConfirmConfigPopUp(Toplevel):
         self.__on_cancel = on_cancel
         self.__on_manual_config = on_manual_config
 
+    #   Will display popup and wait for an answer
     def show(self, dataset: DataSet):
 
         sensors_positions = dataset.get_positions()
