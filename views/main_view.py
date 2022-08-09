@@ -10,7 +10,7 @@
 """
 #   Import of basic modules
 from tkinter import Frame, Toplevel, Label, Button, Radiobutton, StringVar, BooleanVar, Widget, Menu
-from tkinter.constants import DISABLED
+from tkinter.constants import DISABLED, NORMAL
 
 #   Import of custom modules
 from views.control_panel_view import ControlPanel
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     MainView
 
-    In charge of holding views inside of the window.
+    In charge of holding views inside the window.
 
 """
 
@@ -88,14 +88,6 @@ class MainView(Frame):
     def pack_top_section(self):
         self.__top_section.pack(side='top', fill='both', expand=True)
 
-    #
-    #
-    #
-    #   Waning: Still unfinished, image generation need to be finished
-    #
-    #
-    #
-
     def set_import_menu(self, name: str, menu: Menu):
         self.__import_menu_toolbox = menu
         self.__import_menu_toolbox.master = self.__menu_toolbox
@@ -111,6 +103,18 @@ class MainView(Frame):
 
     def get_generation_menu(self) -> Menu:
         return self.__generation_menu_toolbox
+
+    #
+    #   For the two following functions there is an unclean approach
+    #   I can't do it with another approach, it is a limitation of Tkinter
+    #   To change state of a menu, Tkinter need his name
+    #
+    def lock_generation_menu(self) -> None:
+        self.__menu_toolbox.entryconfig("Generate", state=DISABLED)
+
+    def unlock_generation_menu(self) -> None:
+        self.__menu_toolbox.entryconfig("Generate", state=NORMAL)
+
 
     #   If the dataimportmodule did not detect delimiters, application will ask for delimiter setting
     def ask_for_csv_settings(self, possible_delimiters: [(str, str)]):

@@ -6,3 +6,4 @@
 *.ods
 *.png
 *.jpg
+/pip/get-pip.py

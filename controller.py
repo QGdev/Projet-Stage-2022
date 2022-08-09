@@ -16,7 +16,10 @@ from tkinter import Menu, messagebox
 from tkinter import filedialog as fd
 
 #   Import of custom modules
+from tkinter.filedialog import asksaveasfile
+
 from dataset import DataSet
+from gaussian_generation import generate_save_image
 from import_module import DataImportModule
 from model import Model, PlaySpeed
 from utils import multiple_svg_path_to_grp_pts, get_color_gradient_array, get_color_hex_array, \
@@ -119,8 +122,8 @@ class Controller:
 
         #   Declare generation menu
         generation_menu = Menu(file_menu, tearoff=False)
-        generation_menu.add_command(label="Full data file",
-                                    command=lambda: self.on_import(DataImportModule.ImportTypes.Full_File))
+        generation_menu.add_command(label="Gaussian visualisation",
+                                    command=lambda: self.on_gaussian_image_gen())
 
         #   Attach the file menu to the menubar
         self.__main_view.set_import_menu("File", file_menu)
@@ -234,7 +237,7 @@ class Controller:
             self.__model, svg_path_data = importation_result
             self.__bg_pts_grps = multiple_svg_path_to_grp_pts(svg_path_data)
 
-        #   Ask for a confirmation of the deparsed data
+        #   Ask for a confirmation of the de-parsed data
         ConfirmConfigPopUp(self.__main_view,
                            #    On confirm, will initialize sensors_map_ui and need to know
                            #    if the y-axis need to be inverted
@@ -242,6 +245,15 @@ class Controller:
                            #    If the user simply close or exit the window
                            self.__on_loading_cancel,
                            self.__on_manual_config).show(self.__model.get_dataset())
+
+    #   When user want to generate gaussian visualisation as an image
+    def on_gaussian_image_gen(self) -> None:
+        self.get_model().pause()
+        self.__thread_ask_stop_flag = True
+        generate_save_image(self.get_dataset().get_centers(),
+                            self.get_dataset().get_sensors_normalized_values_at(self.get_model().get_current_step_number()),
+                            (self.get_dataset().get_map_width(), self.get_dataset().get_map_height()),
+                            asksaveasfile(mode='w', defaultextension=".jpg"))
 
     #   On window resize event
     def on_resize(self, _: tk.Event) -> None:
@@ -268,6 +280,7 @@ class Controller:
                 self.__thread.join()
 
             self.__control_panel.lock_interface()
+            self.__main_view.lock_generation_menu()
 
             self.__control_panel.update_actual_time_label("00:00.000")
             self.__control_panel.update_actual_time_scale(0)
@@ -411,6 +424,8 @@ class Controller:
         self.__control_panel.normal_dir_mode()
         self.__control_panel.realtime_mode()
 
+        self.__main_view.unlock_generation_menu()
+
         self.launch_thread()
 
     #   When the loaded configuration as been invalidated or canceled
@@ -427,7 +442,7 @@ class Controller:
         self.__data_loaded = False
 
     #   This option was basically concepted to let user change settings by hand
-    #   Due to lack of time, this was unimplemented
+    #   Due to lack of time, this was unimplemented and might be not useful
     def __on_manual_config(self) -> None:
         print("manual data config asked !")
         print("NOT IMPLEMENTED !")

@@ -58,13 +58,16 @@ class SensorsMapView(Canvas):
         self.__offset_width: float
         self.y_axis_inversion = True
 
-    def update_map_settings(self, height: int, width: int,
+    #   Will be called at the beginning to initialize map size and y inversion or not
+    def update_map_settings(self,
+                            height: int, width: int,
                             y_axis_inversion: bool) -> None:
-
         self.__map_width = width
         self.__map_height = height
         self.__y_axis_inversion = y_axis_inversion
 
+    #   Will update scale factor
+    #   Will take the best fit scale factor between x and y
     def update_scale_factor(self):
         #   Importation of used parameters to avoid long annoying code
         #       For canvas size parameters
@@ -107,28 +110,37 @@ class SensorsMapView(Canvas):
 
     """
 
+    #   Draw the background that is a group of polygons represented by group of points [x,y], [x1, y1]...
     def draw_bg(self, drawing_data: [[[int, int]]]) -> None:
         for poly in drawing_data:
             pts: [[int, int]] = [[int(p[0] * self.__scale_factor), int(p[1] * self.__scale_factor)] for p in poly]
             self.create_polygon(pts, fill="silver", tags='bg')
 
-    def draw_sensor(self, index: int, color: str, id: str) -> None:
-        self.create_polygon(self.__cache_sensors_positions[index], fill=color, tags=id)
-
-    def draw_sensor_names(self, position: [[int, int]], sensors_name: [str]) -> None:
-        for index in range (len(sensors_name)):
+    #   Will draw sensors names at given position
+    #       WARNING:    len(position) and len(sensors_names) must be equal
+    def draw_sensor_names(self, position: [[int, int]], sensors_names: [str]) -> None:
+        for index in range (len(sensors_names)):
             self.create_text(position[index].x * self.__scale_factor,
                              position[index].y * self.__scale_factor,
                              font=self.__sensor_name_font,
                              fill='white',
-                             text=sensors_name[index])
+                             text=sensors_names[index])
 
-    def update_sensor(self, color: str, id: str) -> None:
-        self.itemconfigure(id, fill=color)
+    #   Will draw sensor with a given sensor index
+    #       WARNING:    sensors position cache must be initialized properly with update_cache_position()
+    def draw_sensor(self, index: int, color: str, id: str) -> None:
+        self.create_polygon(self.__cache_sensors_positions[index], fill=color, tags=id)
 
+    #   Will draw center of mass with at a given temporal index
+    #       WARNING:    center of mass position cache must be initialized properly with update_cache_position()
     def draw_center_of_mass(self, index: int) -> None:
         self.delete('com')
         self.create_text(self.__cache_c_o_m_positions[index], font=self.__com_font, tags='com', text='+')
+
+    #   Will update sensor based on his drawing id
+    #       NOTE: Much more efficient that redrawing sensors
+    def update_sensor(self, color: str, id: str) -> None:
+        self.itemconfigure(id, fill=color)
 
     """
 
@@ -137,6 +149,7 @@ class SensorsMapView(Canvas):
 
     """
 
+    #   Will be called by controller on resize event
     def on_resize(self) -> None:
         self.update_scale_factor()
         self.update_cache_position()
@@ -149,11 +162,18 @@ class SensorsMapView(Canvas):
 
     """
 
-    def __calculate_cache_position(self, positions: [Position],
+    #   Will calculate and put in cache the position of each points of drawn polygon that represent a sensor
+    #
+    #   Might be obsolete because sensors is now only drawn once, at the start and every resize event
+    #   So it might be a part that will be moved or merged into the draw_sensor method
+    #
+    def __calculate_cache_position(self,
+                                   positions: [Position],
                                    sensors_characteristics: [int, int, int]) -> [[[int, int]]]:
         new_cache: [[[int, int]]] = list(list())
 
-        print("RECALCULATE CACHE")
+        #   ONLY FOR DEBUG
+        #   print("RECALCULATE CACHE")
 
         for i in range(len(positions)):
 
@@ -204,10 +224,12 @@ class SensorsMapView(Canvas):
 
         return new_cache
 
+    #   Will calculate and put in cache the position of the center of mass points
     def __calculate_cache_c_o_m_position(self, positions: [Position]) -> [[int, int]]:
         new_cache: [[int, int]] = list(list())
 
-        print("RECALCULATE C_O_M CACHE")
+        #   ONLY FOR DEBUG
+        #   print("RECALCULATE C_O_M CACHE")
 
         for i in range(len(positions)):
 
@@ -225,6 +247,7 @@ class SensorsMapView(Canvas):
 
         return new_cache
 
+    #   Called to update both caches
     def update_cache_position(self):
         self.__cache_sensors_positions = self.__calculate_cache_position(self.__controller.get_dataset().get_positions(),
                                                                          self.__controller.get_dataset().get_sensors_characteristics())
